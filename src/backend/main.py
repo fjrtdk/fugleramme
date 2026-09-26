@@ -3,11 +3,12 @@
 import logging
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.backend.config import settings
@@ -130,3 +131,52 @@ app.include_router(detections_router, prefix="/api/v1")
 app.include_router(settings_router, prefix="/api/v1")
 app.include_router(ws_audio_router)
 app.include_router(ws_detections_router)
+
+# ── Static files & SPA fallback ────────────────────────────────────────────────
+# Must be registered LAST so API/WS routes take priority.
+#
+# The frontend dist directory is configured via FRONTEND_DIR (set in the Docker
+# image) or defaults to "frontend_dist" relative to the working directory.
+
+_FRONTEND_DIR = Path(settings.frontend_dir)
+_FRONTEND_DIR_RESOLVED: Path | None = None
+if _FRONTEND_DIR.exists():
+    _FRONTEND_DIR_RESOLVED = _FRONTEND_DIR.resolve()
+    logger.info("Serving frontend from %s", _FRONTEND_DIR_RESOLVED)
+else:
+    logger.warning("Frontend dir not found (%s) — SPA serving disabled", _FRONTEND_DIR)
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa_fallback(full_path: str):
+    """Serve the SPA index.html for all unmatched paths, or static files when
+    an exact match exists in the frontend dist directory.
+
+    Paths starting with ``api/`` or ``ws/`` are explicitly rejected so that
+    mistyped API calls receive a proper 404 rather than the SPA shell.
+    """
+    if full_path.startswith(("api/", "ws/")):
+        raise HTTPException(status_code=404)
+
+    if _FRONTEND_DIR_RESOLVED is None:
+        raise HTTPException(status_code=404, detail="Frontend not available")
+
+    # Guard against path traversal
+    try:
+        candidate = (_FRONTEND_DIR / full_path).resolve()
+        if not str(candidate).startswith(str(_FRONTEND_DIR_RESOLVED)):
+            raise HTTPException(status_code=404)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=404)
+
+    if candidate.is_file():
+        return FileResponse(str(candidate))
+
+    # SPA fallback: unknown paths (e.g. /settings, /login) get index.html
+    index = _FRONTEND_DIR / "index.html"
+    if index.exists():
+        return FileResponse(str(index))
+
+    raise HTTPException(status_code=404)

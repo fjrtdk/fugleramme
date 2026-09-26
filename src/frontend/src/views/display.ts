@@ -66,6 +66,7 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
   const settings = getCurrentSettings();
   mountMode(settings.display_mode);
   applyMarginToCanvas(canvas, settings.margin_percent);
+  applyDisplayFont(settings.font_family);
 
   // Mic status
   setStatusHandler((status: MicStatus) => {
@@ -91,6 +92,7 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
         mountMode(newSettings.display_mode);
       }
       applyMarginToCanvas(canvas, newSettings.margin_percent);
+      applyDisplayFont(newSettings.font_family);
       if (currentMode === 'collage') collageRefresh();
     }
   );
@@ -145,6 +147,11 @@ function applyMarginToCanvas(canvas: HTMLElement, marginPercent: number) {
   const shortSide = Math.min(window.innerWidth, window.innerHeight);
   const marginPx = shortSide * (marginPercent / 100);
   canvas.style.setProperty('--canvas-margin', `${marginPx}px`);
+}
+
+/** Apply the chosen font family to all bird label elements via a CSS custom property. */
+function applyDisplayFont(fontFamily: string) {
+  document.documentElement.style.setProperty('--display-font', `'${fontFamily}', Georgia, serif`);
 }
 
 function micStatusLabel(status: MicStatus): string {

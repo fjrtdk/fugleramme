@@ -28,6 +28,9 @@ class Settings:
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
     database_path: str = os.getenv("DATABASE_PATH", "fugleramme.db")
+    # Directory containing the compiled frontend SPA (Vite dist output).
+    # Set to an absolute path in production via the FRONTEND_DIR env var.
+    frontend_dir: str = os.getenv("FRONTEND_DIR", "frontend_dist")
     cors_origins: list[str] = [
         "http://localhost:5173",
         "http://localhost:3000",

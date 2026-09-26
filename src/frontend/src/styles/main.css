@@ -2,6 +2,7 @@
    FUGLERAMME — main.css
    All component styles using design token CSS variables
    ============================================================ */
+@import './fonts.css';
 
 /* ── App Layer System ─────────────────────────────────────── */
 
@@ -659,6 +660,59 @@
   border: var(--border-thin) solid var(--color-error-border);
 }
 
+/* ── Settings: Toggle Control ─────────────────────────────── */
+
+.setting-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.setting-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.setting-toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--color-dash-border);
+  transition: background var(--micro-button-hover) var(--ease-out);
+}
+
+.setting-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-paper-100);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform var(--micro-button-hover) var(--ease-out);
+}
+
+.setting-toggle input:checked + .setting-toggle-track {
+  background: var(--color-forest-700);
+}
+
+.setting-toggle input:checked + .setting-toggle-track::after {
+  transform: translateX(18px);
+}
+
+.setting-toggle input:focus-visible + .setting-toggle-track {
+  outline: 2px solid var(--color-dash-focus);
+  outline-offset: 2px;
+}
+
 /* ── Privacy Page ─────────────────────────────────────────── */
 
 .privacy-page {
@@ -766,12 +820,20 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: var(--color-display-canvas);
+  /* Aged parchment base — layered for depth without external images */
+  background-color: var(--color-display-canvas);
   background-image:
-    radial-gradient(ellipse at 20% 20%, rgba(196, 152, 110, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(168, 120, 80, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 10%, rgba(232, 212, 180, 0.12) 0%, transparent 40%),
-    radial-gradient(1px 1px at 30% 40%, rgba(74, 46, 26, 0.04) 0%, transparent 100%);
+    /* Fine paper grain via inline SVG feTurbulence */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23grain)' opacity='0.055'/%3E%3C/svg%3E"),
+    /* Page-edge vignette — dark corners like aged paper */
+    radial-gradient(ellipse at center, transparent 52%, rgba(90, 55, 25, 0.22) 100%),
+    /* Subtle center highlight — warm light source from upper-left */
+    radial-gradient(ellipse at 38% 35%, rgba(255, 248, 232, 0.48) 0%, transparent 58%),
+    /* Tonal variation spots to break flatness */
+    radial-gradient(ellipse at 16% 22%, rgba(110, 70, 30, 0.07) 0%, transparent 42%),
+    radial-gradient(ellipse at 82% 76%, rgba(100, 62, 28, 0.06) 0%, transparent 36%),
+    radial-gradient(ellipse at 74% 14%, rgba(90, 55, 25, 0.05) 0%, transparent 30%),
+    radial-gradient(ellipse at 28% 88%, rgba(80, 48, 20, 0.04) 0%, transparent 28%);
   overflow: hidden;
 }
 
@@ -811,6 +873,27 @@
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* ── Species Label ────────────────────────────────────────── */
+
+.bird-label {
+  position: absolute;
+  bottom: -1.7em;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--display-font, 'EB Garamond', Georgia, serif);
+  font-size: clamp(0.62rem, 1.3vw, 0.88rem);
+  font-style: italic;
+  /* Dark ink on parchment — museum specimen label aesthetic */
+  color: var(--color-display-label, #2E1A10);
+  text-shadow: 0 1px 3px rgba(245, 234, 216, 0.6);
+  opacity: 0.82;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  letter-spacing: 0.015em;
 }
 
 /* ── Single Bird (Latest Bird / Newest Arrival) ───────────── */
@@ -856,6 +939,7 @@
   opacity: 0;
   transition: opacity var(--empty-appear-duration) var(--empty-appear-easing);
   pointer-events: none;
+  text-align: center;
 }
 
 .empty-perch.visible {
@@ -866,6 +950,19 @@
   width: 100%;
   height: auto;
   display: block;
+}
+
+/* "Listening…" caption — vintage field-note aesthetic */
+.empty-perch::after {
+  content: 'Listening\2026';
+  display: block;
+  margin-top: 1.1em;
+  font-family: var(--display-font, 'EB Garamond', Georgia, serif);
+  font-size: clamp(0.8rem, 2vw, 1rem);
+  font-style: italic;
+  color: var(--color-display-label, #2E1A10);
+  opacity: 0.5;
+  letter-spacing: 0.06em;
 }
 
 /* ── Mic Status ───────────────────────────────────────────── */

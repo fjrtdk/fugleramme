@@ -3,6 +3,12 @@ import type { Settings } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
 import type { ApiResponse } from './client';
 
+const SETTINGS_COLUMNS = [
+  'display_mode', 'margin_percent', 'lookback_window', 'max_species', 'species_sort',
+  'latitude', 'longitude',
+  'font_family', 'artwork_style', 'show_species_label', 'label_language',
+].join(', ');
+
 export async function getSettings(): Promise<ApiResponse<Settings>> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -11,7 +17,7 @@ export async function getSettings(): Promise<ApiResponse<Settings>> {
 
   const { data, error } = await supabase
     .from('user_settings')
-    .select('display_mode, margin_percent, lookback_window, max_species, species_sort, latitude, longitude')
+    .select(SETTINGS_COLUMNS)
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -35,12 +41,12 @@ export async function putSettings(settings: Settings): Promise<ApiResponse<Setti
       { user_id: user.id, ...settings },
       { onConflict: 'user_id' }
     )
-    .select('display_mode, margin_percent, lookback_window, max_species, species_sort, latitude, longitude')
+    .select(SETTINGS_COLUMNS)
     .single();
 
   if (error) {
     return { status: 500, error: { code: 'DB_ERROR', message: error.message } };
   }
 
-  return { status: 200, data: data as Settings };
+  return { status: 200, data: data as unknown as Settings };
 }

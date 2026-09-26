@@ -1,0 +1,63 @@
+/* ============================================================
+   FUGLERAMME — fonts.css
+   @font-face declarations for the 7 bundled OFL font families.
+   The upstream assets include one italic TTF per family, served
+   from /fonts/<family-dir>/. These are used for species labels
+   in the display views.
+   ============================================================ */
+
+@font-face {
+  font-family: 'Alegreya';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/alegreya/Alegreya-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Bitter';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/bitter/Bitter-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/cormorantgaramond/CormorantGaramond-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ebgaramond/EBGaramond-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/gentiumbookplus/GentiumBookPlus-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Libre Baskerville';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/librebaskerville/LibreBaskerville-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/playfairdisplay/PlayfairDisplay-Italic.ttf') format('truetype');
+}

@@ -15,6 +15,10 @@ export interface Settings {
   species_sort: 'most_heard' | 'rarest_window' | 'rarest_all_time';
   latitude: number | null;
   longitude: number | null;
+  font_family: string;
+  artwork_style: 'classic' | 'custom';
+  show_species_label: boolean;
+  label_language: 'common' | 'scientific';
 }
 
 export interface Detection {
@@ -52,6 +56,10 @@ export const DEFAULT_SETTINGS: Settings = {
   species_sort: 'most_heard',
   latitude: null,
   longitude: null,
+  font_family: 'EB Garamond',
+  artwork_style: 'classic',
+  show_species_label: true,
+  label_language: 'common',
 };
 
 // Linger time for collage birds (default 60 seconds per US-004 AC 9)

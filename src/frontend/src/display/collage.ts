@@ -1,10 +1,16 @@
 import type { Detection } from '../types';
 import { state } from '../state';
 import { BIRD_LINGER_MS } from '../types';
+import { resolveArtworkPathSync } from '../lib/artwork';
+import { getMassByName } from '../lib/bird-sizes';
 
-const MAX_MASS_G = 5000; // heaviest common garden bird reference
+// Logarithmic scale parameters — log(MAX_MASS_G+1) used as denominator
+const MAX_MASS_G = 5000; // heaviest common display species reference
 const MIN_SIZE_PX = 80;
 const MAX_SIZE_PX = 280;
+
+// Padding (px) kept clear between bird bounding boxes
+const OVERLAP_PADDING = 12;
 
 interface ActiveBird {
   scientificName: string;
@@ -44,17 +50,17 @@ export function handleDetection(detections: Detection[]) {
     const sciName = det.scientific_name ?? det.species_scientific ?? '';
     if (!sciName) continue;
 
-    const mass = state.getMass(sciName) ?? 20;
+    // Prefer server-supplied mass; fall back to CSV lookup
+    const mass = state.getMass(sciName) ?? getMassByName(sciName);
     const now = Date.now();
 
     if (activeBirds.has(sciName)) {
-      // Refresh timer
+      // Refresh linger timer only
       const bird = activeBirds.get(sciName)!;
       bird.lastDetected = now;
       clearTimeout(bird.timer);
       bird.timer = setTimeout(() => removeBird(sciName), lingerMs);
     } else {
-      // New bird
       addBird(det, sciName, mass, now, settings.margin_percent);
     }
   }
@@ -63,31 +69,59 @@ export function handleDetection(detections: Detection[]) {
   updateEmptyState();
 }
 
+function resolveIllustrationPath(det: Detection): string | null {
+  if (det.illustration_path) return det.illustration_path;
+  const settings = state.getSettings();
+  if (!settings) return null;
+  const sciName = det.scientific_name ?? det.species_scientific ?? '';
+  const common = det.common_name ?? det.species_common ?? '';
+  return resolveArtworkPathSync(sciName, common, settings.artwork_style);
+}
+
 function addBird(det: Detection, sciName: string, mass: number, now: number, marginPercent: number) {
   if (!canvas) return;
 
   const size = computeSize(mass);
   const { x, y } = computePosition(sciName, mass, marginPercent, size);
+  const settings = state.getSettings();
 
   const el = document.createElement('div');
   el.className = 'bird-card entering';
-  el.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;`;
+
+  // Heavier birds render above lighter ones, preserving the natural-history-plate feel
+  const normalizedMass = Math.log(mass + 1) / Math.log(MAX_MASS_G + 1);
+  el.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;z-index:${Math.round(normalizedMass * 90 + 10)};`;
 
   const img = document.createElement('img');
-  img.alt = ''; // decorative
+  img.alt = '';
   img.draggable = false;
-  if (det.illustration_path) {
-    img.src = det.illustration_path;
+  const illustrationPath = resolveIllustrationPath(det);
+  if (illustrationPath) {
+    img.src = illustrationPath;
   } else {
     el.classList.add('no-illustration');
-    img.src = '/icons/silhouette.svg'; // fallback silhouette
+    img.src = '/icons/silhouette.svg';
   }
   img.onerror = () => { el.classList.add('no-illustration'); };
   el.appendChild(img);
 
+  // Species label — font and language from settings
+  if (settings?.show_species_label) {
+    const label = document.createElement('span');
+    label.className = 'bird-label';
+    if (settings.font_family) {
+      label.style.fontFamily = `'${settings.font_family}', Georgia, serif`;
+    }
+    const commonName = det.common_name ?? det.species_common ?? '';
+    label.textContent = settings.label_language === 'scientific'
+      ? sciName
+      : (commonName || sciName);
+    el.appendChild(label);
+  }
+
   canvas.appendChild(el);
 
-  // Trigger entrance animation
+  // Double-rAF to trigger CSS transition
   requestAnimationFrame(() => {
     requestAnimationFrame(() => { el.classList.remove('entering'); el.classList.add('visible'); });
   });
@@ -96,7 +130,7 @@ function addBird(det: Detection, sciName: string, mass: number, now: number, mar
   activeBirds.set(sciName, {
     scientificName: sciName,
     commonName: det.common_name ?? det.species_common ?? sciName,
-    illustrationPath: det.illustration_path,
+    illustrationPath: illustrationPath,
     lastDetected: now,
     size, x, y, el, timer,
   });
@@ -112,36 +146,105 @@ function removeBird(sciName: string) {
   updateEmptyState();
 }
 
+// ─── Sizing ──────────────────────────────────────────────────────────────────
+
+/**
+ * Logarithmic size mapping.
+ * Uses log scale so small birds stay visible and large birds don't dominate.
+ * log(1g+1)/log(5001) ≈ 0.08 → 96 px
+ * log(100g+1)/log(5001) ≈ 0.55 → 190 px
+ * log(5000g+1)/log(5001) = 1.0 → 280 px
+ */
 function computeSize(mass: number): number {
-  const normalized = Math.sqrt(Math.min(mass, MAX_MASS_G) / MAX_MASS_G);
+  const clamped = Math.min(Math.max(mass, 1), MAX_MASS_G);
+  const normalized = Math.log(clamped + 1) / Math.log(MAX_MASS_G + 1);
   return Math.round(MIN_SIZE_PX + normalized * (MAX_SIZE_PX - MIN_SIZE_PX));
 }
 
-function computePosition(sciName: string, mass: number, marginPercent: number, size: number): { x: number; y: number } {
+// ─── Positioning ─────────────────────────────────────────────────────────────
+
+/**
+ * Compute a position for a new bird.
+ *
+ * Strategy:
+ *  1. Derive a "desired" polar position: heavier → small radius (center),
+ *     lighter → large radius (periphery). Angle from species name hash.
+ *  2. Try ANGLE_STEPS evenly-spaced angular offsets at the desired radius.
+ *  3. If still blocked, step outward by one bird-size increment and retry.
+ *  4. Fallback to the raw desired position if nothing clears.
+ */
+function computePosition(
+  sciName: string,
+  mass: number,
+  marginPercent: number,
+  size: number
+): { x: number; y: number } {
   if (!canvas) return { x: 0, y: 0 };
 
   const W = canvas.offsetWidth;
   const H = canvas.offsetHeight;
   const margin = Math.min(W, H) * (marginPercent / 100);
-  const availW = W - margin * 2 - size;
-  const availH = H - margin * 2 - size;
+  const availW = W - margin * 2;
+  const availH = H - margin * 2;
   if (availW <= 0 || availH <= 0) return { x: margin, y: margin };
 
-  // Heavier birds: smaller radius from center
-  const normalizedMass = Math.sqrt(Math.min(mass, MAX_MASS_G) / MAX_MASS_G);
-  const maxRadius = Math.min(availW, availH) * 0.45;
-  const radius = maxRadius * (1 - normalizedMass * 0.8);
+  const normalizedMass = Math.log(mass + 1) / Math.log(MAX_MASS_G + 1);
+  const maxRadius = Math.min(availW, availH) * 0.42;
 
-  // Deterministic angle from species name hash
-  const hash = simpleHash(sciName);
-  const angle = (hash % 360) * (Math.PI / 180);
+  // Heavier birds: radius closer to 0 (center); lighter: closer to maxRadius
+  const baseRadius = maxRadius * (1 - normalizedMass * 0.78);
+
+  // Deterministic base angle from species name
+  const baseAngle = (simpleHash(sciName) % 360) * (Math.PI / 180);
 
   const centerX = W / 2 - size / 2;
   const centerY = H / 2 - size / 2;
-  const x = Math.max(margin, Math.min(margin + availW, centerX + Math.cos(angle) * radius));
-  const y = Math.max(margin, Math.min(margin + availH, centerY + Math.sin(angle) * radius));
 
-  return { x: Math.round(x), y: Math.round(y) };
+  const ANGLE_STEPS = 16;
+  const RADIUS_STEPS = 5;
+
+  for (let rStep = 0; rStep < RADIUS_STEPS; rStep++) {
+    const radius = baseRadius + rStep * size * 0.65;
+    for (let aStep = 0; aStep < ANGLE_STEPS; aStep++) {
+      const angle = baseAngle + (aStep * 2 * Math.PI) / ANGLE_STEPS;
+      const x = clamp(
+        centerX + Math.cos(angle) * radius,
+        margin,
+        margin + availW - size
+      );
+      const y = clamp(
+        centerY + Math.sin(angle) * radius,
+        margin,
+        margin + availH - size
+      );
+      if (!overlapsAny(x, y, size)) {
+        return { x: Math.round(x), y: Math.round(y) };
+      }
+    }
+  }
+
+  // Fallback: place at desired position regardless
+  const fbX = clamp(centerX + Math.cos(baseAngle) * baseRadius, margin, margin + availW - size);
+  const fbY = clamp(centerY + Math.sin(baseAngle) * baseRadius, margin, margin + availH - size);
+  return { x: Math.round(fbX), y: Math.round(fbY) };
+}
+
+/** Returns true if (x, y, size) bounding box overlaps any active bird with padding. */
+function overlapsAny(x: number, y: number, size: number): boolean {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  for (const bird of activeBirds.values()) {
+    const bx = bird.x + bird.size / 2;
+    const by = bird.y + bird.size / 2;
+    const minDist = (size + bird.size) / 2 + OVERLAP_PADDING;
+    const dist = Math.sqrt((cx - bx) ** 2 + (cy - by) ** 2);
+    if (dist < minDist) return true;
+  }
+  return false;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 function simpleHash(s: string): number {
@@ -152,48 +255,52 @@ function simpleHash(s: string): number {
   return Math.abs(h);
 }
 
+// ─── Enforcement ─────────────────────────────────────────────────────────────
+
 function enforceMaxSpecies(settings: { max_species: number | null; species_sort: string }) {
   const max = settings.max_species;
   if (max === null || activeBirds.size <= max) return;
 
-  // Build sorted list to determine which to remove
   const birds = Array.from(activeBirds.values());
-
   if (settings.species_sort === 'most_heard') {
-    // Keep most recently detected
     birds.sort((a, b) => b.lastDetected - a.lastDetected);
   } else {
-    // For rarest: keep the ones detected least; sort oldest-first
     birds.sort((a, b) => a.lastDetected - b.lastDetected);
   }
 
-  const toRemove = birds.slice(max);
-  toRemove.forEach(b => {
+  birds.slice(max).forEach(b => {
     clearTimeout(b.timer);
     removeBird(b.scientificName);
   });
 }
 
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
 function updateEmptyState() {
   if (!emptyPerch) return;
-  if (activeBirds.size === 0) {
-    emptyPerch.classList.add('visible');
-  } else {
-    emptyPerch.classList.remove('visible');
-  }
+  emptyPerch.classList.toggle('visible', activeBirds.size === 0);
 }
+
+// ─── Settings refresh ─────────────────────────────────────────────────────────
 
 export function refreshSettings() {
   const settings = state.getSettings();
-  if (!settings) return;
-  // Re-layout: reposition birds with new margin
-  if (canvas) {
-    activeBirds.forEach((bird, sciName) => {
-      const mass = state.getMass(sciName) ?? 20;
-      const { x, y } = computePosition(sciName, mass, settings.margin_percent, bird.size);
-      bird.x = x; bird.y = y;
-      bird.el.style.left = `${x}px`;
-      bird.el.style.top = `${y}px`;
-    });
-  }
+  if (!settings || !canvas) return;
+
+  // Reposition all birds with updated margin
+  activeBirds.forEach((bird, sciName) => {
+    const mass = state.getMass(sciName) ?? getMassByName(sciName);
+    const { x, y } = computePosition(sciName, mass, settings.margin_percent, bird.size);
+    bird.x = x; bird.y = y;
+    bird.el.style.left = `${x}px`;
+    bird.el.style.top = `${y}px`;
+  });
+
+  // Update labels if font or language changed
+  activeBirds.forEach(bird => {
+    const labelEl = bird.el.querySelector<HTMLElement>('.bird-label');
+    if (labelEl && settings.font_family) {
+      labelEl.style.fontFamily = `'${settings.font_family}', Georgia, serif`;
+    }
+  });
 }

@@ -5,9 +5,24 @@ import { navigate } from '../router';
 import { renderDiagnostics } from '../components/diagnostics';
 import { log } from '../lib/logger';
 import type { Settings } from '../types';
+import { DEFAULT_SETTINGS } from '../types';
+
+const FONT_FAMILIES = [
+  'Alegreya',
+  'Bitter',
+  'Cormorant Garamond',
+  'EB Garamond',
+  'Gentium Book Plus',
+  'Libre Baskerville',
+  'Playfair Display',
+];
 
 export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => void) {
   const user = state.getUser()!;
+  const fontOptions = FONT_FAMILIES.map(f =>
+    `<option value="${f}">${f}</option>`
+  ).join('');
+
   container.innerHTML = `
     <div class="dashboard-page" id="dashboard-inner">
       <header class="dashboard-header">
@@ -82,6 +97,37 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
             <button class="btn-use-location" id="use-location-btn" type="button">Use My Location</button>
             <span class="location-status hidden" id="location-status"></span>
           </div>
+          <div class="setting-subheading" id="display-subheading">
+            <span class="setting-subheading-label">Display</span>
+            <span class="setting-subheading-hint">Font, artwork, and label preferences</span>
+          </div>
+          <div class="setting-row" id="row-font">
+            <label class="setting-label" for="s-font-family">Font</label>
+            <select class="setting-select" id="s-font-family">
+              ${fontOptions}
+            </select>
+          </div>
+          <div class="setting-row" id="row-artwork-style">
+            <label class="setting-label" for="s-artwork-style">Artwork style</label>
+            <select class="setting-select" id="s-artwork-style">
+              <option value="classic">Classic (hand-cut illustrations)</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="setting-row" id="row-show-label">
+            <label class="setting-label" for="s-show-label">Show species label</label>
+            <label class="setting-toggle" aria-label="Show species label">
+              <input type="checkbox" id="s-show-label" />
+              <span class="setting-toggle-track"></span>
+            </label>
+          </div>
+          <div class="setting-row" id="row-label-lang">
+            <label class="setting-label" for="s-label-lang">Label language</label>
+            <select class="setting-select" id="s-label-lang">
+              <option value="common">Common name</option>
+              <option value="scientific">Scientific name</option>
+            </select>
+          </div>
           <div class="setting-row setting-row-actions">
             <button class="btn-save-settings" id="save-settings">Save settings</button>
             <span class="settings-save-status hidden" id="save-status"></span>
@@ -149,6 +195,12 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
     marginVal.textContent = marginSlider.value;
   });
 
+  // Font preview: update CSS variable live
+  const fontSelect = container.querySelector<HTMLSelectElement>('#s-font-family')!;
+  fontSelect.addEventListener('change', () => {
+    document.documentElement.style.setProperty('--display-font', `'${fontSelect.value}', Georgia, serif`);
+  });
+
   // Save settings
   container.querySelector('#save-settings')!.addEventListener('click', async () => {
     await saveSettings(container);
@@ -181,6 +233,10 @@ function populateSettingsForm(container: HTMLElement, s: Settings) {
   const sortEl = container.querySelector<HTMLSelectElement>('#s-sort');
   const latEl = container.querySelector<HTMLInputElement>('#s-latitude');
   const lonEl = container.querySelector<HTMLInputElement>('#s-longitude');
+  const fontEl = container.querySelector<HTMLSelectElement>('#s-font-family');
+  const artworkEl = container.querySelector<HTMLSelectElement>('#s-artwork-style');
+  const showLabelEl = container.querySelector<HTMLInputElement>('#s-show-label');
+  const labelLangEl = container.querySelector<HTMLSelectElement>('#s-label-lang');
 
   if (modeEl) modeEl.value = s.display_mode;
   if (marginEl) { marginEl.value = String(s.margin_percent); }
@@ -190,8 +246,18 @@ function populateSettingsForm(container: HTMLElement, s: Settings) {
   if (sortEl) sortEl.value = s.species_sort;
   if (latEl) latEl.value = s.latitude != null ? String(s.latitude) : '';
   if (lonEl) lonEl.value = s.longitude != null ? String(s.longitude) : '';
+  if (fontEl) fontEl.value = s.font_family ?? DEFAULT_SETTINGS.font_family;
+  if (artworkEl) artworkEl.value = s.artwork_style ?? 'classic';
+  if (showLabelEl) showLabelEl.checked = s.show_species_label ?? true;
+  if (labelLangEl) labelLangEl.value = s.label_language ?? 'common';
 
   updateCollageOnlyVisibility(s.display_mode);
+
+  // Apply font immediately
+  document.documentElement.style.setProperty(
+    '--display-font',
+    `'${s.font_family ?? DEFAULT_SETTINGS.font_family}', Georgia, serif`
+  );
 }
 
 function updateCollageOnlyVisibility(mode: string) {
@@ -213,6 +279,10 @@ async function saveSettings(container: HTMLElement) {
   const sortEl = container.querySelector<HTMLSelectElement>('#s-sort')!;
   const latEl = container.querySelector<HTMLInputElement>('#s-latitude')!;
   const lonEl = container.querySelector<HTMLInputElement>('#s-longitude')!;
+  const fontEl = container.querySelector<HTMLSelectElement>('#s-font-family')!;
+  const artworkEl = container.querySelector<HTMLSelectElement>('#s-artwork-style')!;
+  const showLabelEl = container.querySelector<HTMLInputElement>('#s-show-label')!;
+  const labelLangEl = container.querySelector<HTMLSelectElement>('#s-label-lang')!;
   const saveBtn = container.querySelector<HTMLButtonElement>('#save-settings')!;
   const saveStatus = container.querySelector<HTMLElement>('#save-status')!;
 
@@ -248,6 +318,10 @@ async function saveSettings(container: HTMLElement) {
     species_sort: sortEl.value as Settings['species_sort'],
     latitude,
     longitude,
+    font_family: fontEl.value,
+    artwork_style: artworkEl.value as Settings['artwork_style'],
+    show_species_label: showLabelEl.checked,
+    label_language: labelLangEl.value as Settings['label_language'],
   };
 
   saveBtn.disabled = true;

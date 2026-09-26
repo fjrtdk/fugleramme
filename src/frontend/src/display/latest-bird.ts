@@ -1,4 +1,6 @@
 import type { Detection } from '../types';
+import { state } from '../state';
+import { resolveArtworkPathSync } from '../lib/artwork';
 
 let canvas: HTMLElement | null = null;
 let emptyPerch: HTMLElement | null = null;
@@ -44,19 +46,39 @@ export function handleDetection(detections: Detection[]) {
 }
 
 function createBirdEl(det: Detection): HTMLElement {
+  const settings = state.getSettings();
   const el = document.createElement('div');
   el.className = 'bird-card bird-single entering';
+
   const img = document.createElement('img');
   img.alt = '';
   img.draggable = false;
-  if (det.illustration_path) {
-    img.src = det.illustration_path;
+
+  const sciName = det.scientific_name ?? det.species_scientific ?? '';
+  const common = det.common_name ?? det.species_common ?? '';
+  const artStyle = settings?.artwork_style ?? 'classic';
+  const illustrationPath = det.illustration_path
+    ?? resolveArtworkPathSync(sciName, common, artStyle);
+
+  if (illustrationPath) {
+    img.src = illustrationPath;
   } else {
     el.classList.add('no-illustration');
     img.src = '/icons/silhouette.svg';
   }
   img.onerror = () => el.classList.add('no-illustration');
   el.appendChild(img);
+
+  if (settings?.show_species_label) {
+    const label = document.createElement('span');
+    label.className = 'bird-label';
+    if (settings.font_family) {
+      label.style.fontFamily = `'${settings.font_family}', Georgia, serif`;
+    }
+    label.textContent = settings.label_language === 'scientific' ? sciName : (common || sciName);
+    el.appendChild(label);
+  }
+
   return el;
 }
 
