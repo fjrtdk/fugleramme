@@ -119,8 +119,8 @@ function createBirdEl(det: Detection): HTMLElement {
   const sciName = det.scientific_name ?? det.species_scientific ?? '';
   const common = det.common_name ?? det.species_common ?? '';
   const artStyle = settings?.artwork_style ?? 'classic';
-  const illustrationPath = det.illustration_path
-    ?? resolveArtworkPathSync(sciName, common, artStyle);
+  // Always resolve client-side: server-stored paths may be stale/wrong extension.
+  const illustrationPath = resolveArtworkPathSync(sciName, common, artStyle);
 
   if (illustrationPath) {
     img.src = illustrationPath;
@@ -128,7 +128,10 @@ function createBirdEl(det: Detection): HTMLElement {
     el.classList.add('no-illustration');
     img.src = '/icons/silhouette.svg';
   }
-  img.onerror = () => el.classList.add('no-illustration');
+  img.onerror = () => {
+    el.classList.add('no-illustration');
+    img.src = '/icons/silhouette.svg';
+  };
   el.appendChild(img);
 
   if (settings?.show_species_label) {

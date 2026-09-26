@@ -121,6 +121,28 @@ async def health():
     return {"status": "ok", "birdnet": birdnet_state is not None}
 
 
+@app.get("/health/files")
+async def health_files():
+    """Debug: list files in the frontend dist directory."""
+    from src.backend.config import settings  # noqa: PLC0415
+
+    base = Path(settings.frontend_dir)
+    if not base.exists():
+        return {"frontend_dir": str(base), "exists": False}
+
+    files: list[str] = []
+    for p in base.rglob("*"):
+        if p.is_file():
+            files.append(str(p.relative_to(base)))
+    return {
+        "frontend_dir": str(base.resolve()),
+        "exists": True,
+        "file_count": len(files),
+        "sample": files[:50],
+        "artwork_files": [f for f in files if f.startswith("artwork/")][:20],
+    }
+
+
 @app.get("/health/birdnet")
 async def health_birdnet(request: Request):
     from src.backend.birdnet import birdnet_state  # noqa: PLC0415

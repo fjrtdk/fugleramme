@@ -72,7 +72,8 @@ export function handleDetection(detections: Detection[]) {
 }
 
 function resolveIllustrationPath(det: Detection): string | null {
-  if (det.illustration_path) return det.illustration_path;
+  // Always resolve client-side: server-stored paths may be stale or use the
+  // wrong extension/format, and the frontend knows the current artwork style.
   const settings = state.getSettings();
   if (!settings) return null;
   const sciName = det.scientific_name ?? det.species_scientific ?? '';
@@ -104,7 +105,10 @@ function addBird(det: Detection, sciName: string, mass: number, now: number, mar
     el.classList.add('no-illustration');
     img.src = '/icons/silhouette.svg';
   }
-  img.onerror = () => { el.classList.add('no-illustration'); };
+  img.onerror = () => {
+    el.classList.add('no-illustration');
+    img.src = '/icons/silhouette.svg';
+  };
   el.appendChild(img);
 
   // Species label — font and language from settings
