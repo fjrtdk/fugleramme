@@ -42,6 +42,7 @@ def run_inference(
     buffer: list[bytes],
     state: BirdNetState,
     top_n: int = 10,
+    confidence_threshold: float = CONFIDENCE_THRESHOLD,
 ) -> list[Detection]:
     """Run BirdNET inference on a 3-frame PCM buffer.
 
@@ -52,12 +53,17 @@ def run_inference(
         top_n:  Maximum species to consider (sorted by confidence desc,
                 applied *before* the threshold filter so the function still
                 returns all species above threshold up to top_n).
+        confidence_threshold: Minimum confidence for a detection to be
+                returned. Defaults to :data:`CONFIDENCE_THRESHOLD`; callers
+                may pass a per-user value (e.g. from settings).
 
     Returns:
-        List of :class:`Detection` objects with ``confidence ≥ 0.5``,
-        sorted by confidence descending.  Empty list on silence or errors.
+        List of :class:`Detection` objects with ``confidence`` at or above
+        ``confidence_threshold``, sorted by confidence descending. Empty
+        list on silence or errors.
     """
     if not buffer:
+        logger.info("Inference skipped: empty buffer")
         return []
 
     try:
@@ -68,6 +74,7 @@ def run_inference(
         # ── Guard: silence / empty signal ─────────────────────────────────────
         peak = np.max(np.abs(audio_int16))
         if peak == 0:
+            logger.info("Inference: silent buffer (peak amplitude=0), no detections")
             return []
 
         # ── Resample 16 kHz → 48 kHz via linear interpolation ─────────────────
@@ -106,7 +113,7 @@ def run_inference(
         detections: list[Detection] = []
         for idx in top_indices:
             conf = float(scores[idx])
-            if conf < CONFIDENCE_THRESHOLD:
+            if conf < confidence_threshold:
                 break   # sorted descending — nothing below this will qualify
             label = state.labels[idx]
             detections.append(
@@ -116,6 +123,25 @@ def run_inference(
                     species_code=label.species_code,
                     confidence=round(conf, 4),
                 )
+            )
+
+        if detections:
+            logger.info(
+                "Inference complete: %d detection(s) (threshold=%.2f)",
+                len(detections),
+                confidence_threshold,
+            )
+            for det in detections:
+                logger.info(
+                    "  detection: scientific_name=%s common_name=%s confidence=%.4f",
+                    det.scientific_name,
+                    det.common_name,
+                    det.confidence,
+                )
+        else:
+            logger.info(
+                "Inference complete: no birds detected above threshold=%.2f",
+                confidence_threshold,
             )
 
         return detections

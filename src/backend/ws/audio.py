@@ -17,7 +17,11 @@ import aiosqlite
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
-from src.backend.auth.jwt_utils import decode_token, validate_supabase_token
+from src.backend.auth.jwt_utils import (
+    decode_token,
+    fetch_confidence_threshold,
+    validate_supabase_token,
+)
 from src.backend.birdnet import birdnet_state
 from src.backend.birdnet.inference import run_inference
 from src.backend.config import settings
@@ -59,6 +63,7 @@ async def _process_buffer(
     db: aiosqlite.Connection,
     user_id: str,
     buffer: list[bytes],
+    confidence_threshold: float = 0.5,
 ) -> None:
     """Run one inference cycle on the 3-frame buffer.
 
@@ -90,7 +95,9 @@ async def _process_buffer(
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     try:
-        detections = run_inference(buffer, birdnet_state)
+        detections = run_inference(
+            buffer, birdnet_state, confidence_threshold=confidence_threshold
+        )
     except Exception as exc:
         logger.exception("run_inference raised unexpectedly: %s", exc)
         await websocket.send_text(
@@ -193,6 +200,13 @@ async def audio_ws(websocket: WebSocket, token: str | None = None):
 
     logger.info("audio connected user=%s", user_id)
 
+    scheme = "https" if websocket.url.scheme == "wss" else "http"
+    origin = f"{scheme}://{websocket.url.netloc}"
+    confidence_threshold = 0.5
+    if token:
+        confidence_threshold = await fetch_confidence_threshold(token, origin)
+    logger.info("audio user=%s confidence_threshold=%.2f", user_id, confidence_threshold)
+
     async with aiosqlite.connect(settings.database_path) as db:
         await _apply_pragmas(db)
         db.row_factory = aiosqlite.Row
@@ -216,7 +230,9 @@ async def audio_ws(websocket: WebSocket, token: str | None = None):
                 buffer.append(data)
 
                 if len(buffer) == _BUFFER_FRAMES:
-                    await _process_buffer(websocket, db, user_id, buffer)
+                    await _process_buffer(
+                        websocket, db, user_id, buffer, confidence_threshold
+                    )
                     buffer.clear()
 
         except WebSocketDisconnect:

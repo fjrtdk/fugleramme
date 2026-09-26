@@ -19,6 +19,7 @@ export interface Settings {
   artwork_style: 'classic' | 'custom';
   show_species_label: boolean;
   label_language: 'common' | 'scientific';
+  confidence_threshold: number;
 }
 
 export interface Detection {
@@ -60,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   artwork_style: 'classic',
   show_species_label: true,
   label_language: 'common',
+  confidence_threshold: 0.5,
 };
 
 // Linger time for collage birds (default 60 seconds per US-004 AC 9)

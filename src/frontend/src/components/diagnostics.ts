@@ -2,7 +2,7 @@ import { supabase, supabaseUrl } from '../lib/supabase';
 import { state } from '../state';
 import { getTail, getEntries, clearEntries } from '../lib/logger';
 import { getAudioWsState, getAudioDiagnostics } from '../ws/audio';
-import { getDetectionsWsState, getWsDiagnostics } from '../ws/detections';
+import { getDetectionsWsState, getWsDiagnostics, getDetectionsSnapshot } from '../ws/detections';
 import { getRenderedBirdCount as getCollageCount } from '../display/collage';
 import { getRenderedBirdCount as getLatestCount } from '../display/latest-bird';
 import { getRenderedBirdCount as getNewestCount } from '../display/newest-arrival';
@@ -62,6 +62,27 @@ export function renderDiagnostics(container: HTMLElement): void {
           <textarea class="diag-report" id="diag-report" readonly spellcheck="false"></textarea>
         </div>
       </div>
+      <div class="diag-section">
+        <h3 class="diag-section-title">Recent Detections</h3>
+        <div class="diag-rows" id="diag-detections-summary">
+          <div class="diag-row"><span class="diag-label">Loading…</span></div>
+        </div>
+        <div class="diag-log-entries diag-detections-list" id="diag-detections-list">
+          <div class="diag-log-empty">No detections yet.</div>
+        </div>
+      </div>
+      <div class="diag-section diag-section--log">
+        <button class="diag-log-toggle" id="diag-inference-log-toggle" type="button">
+          <span>Inference Log</span>
+          <span class="diag-log-count" id="diag-inference-log-count"></span>
+          <span class="diag-log-chevron" id="diag-inference-log-chevron">▶</span>
+        </button>
+        <div class="diag-log-body hidden" id="diag-inference-log-body">
+          <div class="diag-log-entries" id="diag-inference-log-entries">
+            <div class="diag-log-empty">No inference attempts recorded yet.</div>
+          </div>
+        </div>
+      </div>
       <div class="diag-section diag-section--log">
         <button class="diag-log-toggle" id="diag-log-toggle" type="button">
           <span>Debug Log</span>
@@ -80,6 +101,7 @@ export function renderDiagnostics(container: HTMLElement): void {
   `;
 
   void initAll(container);
+  startDetectionsPolling(container);
 }
 
 async function initAll(container: HTMLElement): Promise<void> {
@@ -271,6 +293,101 @@ function renderWsSection(container: HTMLElement): void {
   setRows(container, 'diag-ws-rows', rows);
 }
 
+// ── Recent Detections / Inference Log ───────────────────────────
+
+let _detectionsPollTimer: ReturnType<typeof setInterval> | null = null;
+let _lastRenderedInferenceCount = -1;
+
+function startDetectionsPolling(container: HTMLElement): void {
+  if (_detectionsPollTimer) clearInterval(_detectionsPollTimer);
+  renderDetectionsSection(container);
+  renderInferenceLogEntries(container);
+  _detectionsPollTimer = setInterval(() => {
+    if (!container.isConnected) {
+      if (_detectionsPollTimer) clearInterval(_detectionsPollTimer);
+      _detectionsPollTimer = null;
+      return;
+    }
+    const snap = getDetectionsSnapshot();
+    if (snap.inferenceLog.length !== _lastRenderedInferenceCount) {
+      renderDetectionsSection(container);
+      renderInferenceLogEntries(container);
+    }
+  }, 1000);
+}
+
+function renderDetectionsSection(container: HTMLElement): void {
+  const snap = getDetectionsSnapshot();
+  _lastRenderedInferenceCount = snap.inferenceLog.length;
+
+  const running = snap.lastInferenceTime !== null && Date.now() - snap.lastInferenceTime < 10_000;
+  const rows: DiagRow[] = [
+    {
+      label: 'Last inference',
+      value: snap.lastInferenceTime === null ? 'never' : new Date(snap.lastInferenceTime).toLocaleTimeString(),
+      status: snap.lastInferenceTime === null ? 'neutral' : 'ok',
+    },
+    {
+      label: 'Last detection count',
+      value: String(snap.lastDetectionCount),
+      status: snap.lastDetectionCount > 0 ? 'ok' : 'neutral',
+    },
+    {
+      label: 'Status',
+      value: snap.lastInferenceTime === null
+        ? 'No inference received yet'
+        : running
+          ? (snap.lastDetectionCount > 0 ? 'Inference running' : 'Inference silent')
+          : 'Inference silent',
+      status: snap.lastInferenceTime === null
+        ? 'neutral'
+        : (running && snap.lastDetectionCount > 0 ? 'ok' : 'warn'),
+    },
+  ];
+  setRows(container, 'diag-detections-summary', rows);
+
+  const listEl = container.querySelector<HTMLElement>('#diag-detections-list');
+  if (!listEl) return;
+  if (snap.recentDetections.length === 0) {
+    listEl.innerHTML = '<div class="diag-log-empty">No detections yet.</div>';
+    return;
+  }
+  listEl.innerHTML = [...snap.recentDetections].reverse().map(d => {
+    const common = d.common_name ?? d.species_common ?? '?';
+    const scientific = d.scientific_name ?? d.species_scientific ?? '?';
+    const ts = new Date(d.receivedAt).toLocaleTimeString();
+    return `<div class="diag-log-entry">` +
+      `<span class="diag-log-ts">${escapeHtml(ts)}</span>` +
+      `<span class="diag-log-tag">${escapeHtml(common)} (${escapeHtml(scientific)})</span>` +
+      `<span class="diag-log-msg">confidence ${d.confidence.toFixed(2)}</span>` +
+      `</div>`;
+  }).join('');
+}
+
+function renderInferenceLogEntries(container: HTMLElement): void {
+  const el = container.querySelector<HTMLElement>('#diag-inference-log-entries');
+  const countEl = container.querySelector<HTMLElement>('#diag-inference-log-count');
+  const snap = getDetectionsSnapshot();
+
+  if (countEl) countEl.textContent = snap.inferenceLog.length > 0 ? `(${snap.inferenceLog.length})` : '';
+
+  if (!el) return;
+  if (snap.inferenceLog.length === 0) {
+    el.innerHTML = '<div class="diag-log-empty">No inference attempts recorded yet.</div>';
+    return;
+  }
+  el.innerHTML = [...snap.inferenceLog].reverse().map(e => {
+    const summary = e.detectionCount === 0
+      ? 'no detections'
+      : e.raw.map(d => `${d.common_name ?? d.species_common ?? '?'} ${d.confidence.toFixed(2)}`).join(', ');
+    return `<div class="diag-log-entry">` +
+      `<span class="diag-log-ts">${escapeHtml(new Date(e.ts).toLocaleTimeString())}</span>` +
+      `<span class="diag-log-tag">${e.detectionCount} detection(s)</span>` +
+      `<span class="diag-log-msg">${escapeHtml(summary)}</span>` +
+      `</div>`;
+  }).join('');
+}
+
 // ── Doctor Report ─────────────────────────────────────────────
 
 function getTotalRenderedBirds(): number {
@@ -347,7 +464,7 @@ async function buildDoctorReport(): Promise<string> {
     lines.push(`artwork_style: ${settings.artwork_style}`);
     lines.push(`show_species_label: ${settings.show_species_label}`);
     lines.push(`label_language: ${settings.label_language}`);
-    lines.push('confidence_threshold: not configured');
+    lines.push(`confidence_threshold: ${settings.confidence_threshold ?? 'not configured'}`);
   } else {
     lines.push('Settings not loaded');
   }
@@ -492,6 +609,7 @@ function bindActions(container: HTMLElement): void {
   bindWsTest(container);
   bindDoctor(container);
   bindLogSection(container);
+  bindInferenceLogSection(container);
 }
 
 function bindMicTest(container: HTMLElement): void {
@@ -703,6 +821,27 @@ function updateLogCount(container: HTMLElement): void {
   if (!el) return;
   const n = getEntries().length;
   el.textContent = n > 0 ? `(${n})` : '';
+}
+
+function bindInferenceLogSection(container: HTMLElement): void {
+  const toggle = container.querySelector<HTMLButtonElement>('#diag-inference-log-toggle');
+  const body = container.querySelector<HTMLElement>('#diag-inference-log-body');
+  const chevron = container.querySelector<HTMLElement>('#diag-inference-log-chevron');
+  if (!toggle || !body || !chevron) return;
+
+  toggle.addEventListener('click', () => {
+    const isOpen = !body.classList.contains('hidden');
+    if (isOpen) {
+      body.classList.add('hidden');
+      chevron.textContent = '▶';
+      toggle.classList.remove('active');
+    } else {
+      body.classList.remove('hidden');
+      chevron.textContent = '▼';
+      toggle.classList.add('active');
+      renderInferenceLogEntries(container);
+    }
+  });
 }
 
 // ── Helpers ───────────────────────────────────────────────────

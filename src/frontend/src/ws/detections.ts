@@ -39,6 +39,61 @@ export function getDetectionsWsState(): number {
   return ws?.readyState ?? WebSocket.CLOSED;
 }
 
+// ── Inference visibility (for the diagnostics panel) ────────────────────────
+// Every detection message received counts as one inference attempt, whether
+// or not it carried any actual detections. This lets the diagnostics panel
+// show "inference running vs silent" without a dedicated backend endpoint.
+
+export interface InferenceLogEntry {
+  ts: number;
+  detectionCount: number;
+  raw: Detection[];
+}
+
+const MAX_RECENT_DETECTIONS = 100;
+const MAX_INFERENCE_LOG = 100;
+
+let lastInferenceTime: number | null = null;
+let lastDetectionCount = 0;
+const recentDetections: Array<Detection & { receivedAt: number }> = [];
+const inferenceLog: InferenceLogEntry[] = [];
+
+export interface DetectionsSnapshot {
+  lastInferenceTime: number | null;
+  lastDetectionCount: number;
+  recentDetections: ReadonlyArray<Detection & { receivedAt: number }>;
+  inferenceLog: ReadonlyArray<InferenceLogEntry>;
+}
+
+/** Read-only snapshot of recent inference activity, for the diagnostics panel. */
+export function getDetectionsSnapshot(): DetectionsSnapshot {
+  return {
+    lastInferenceTime,
+    lastDetectionCount,
+    recentDetections,
+    inferenceLog,
+  };
+}
+
+function _recordInferenceAttempt(detections: Detection[]): void {
+  lastInferenceTime = Date.now();
+  lastDetectionCount = detections.length;
+
+  inferenceLog.push({ ts: lastInferenceTime, detectionCount: detections.length, raw: detections });
+  if (inferenceLog.length > MAX_INFERENCE_LOG) inferenceLog.shift();
+
+  if (detections.length > 0) {
+    const receivedAt = lastInferenceTime;
+    for (const d of detections) {
+      recentDetections.push({ ...d, receivedAt });
+    }
+    while (recentDetections.length > MAX_RECENT_DETECTIONS) recentDetections.shift();
+    log('WS_DET', `inference: ${detections.length} detection(s)`);
+  } else {
+    log('WS_DET', 'inference: no detections (silent)');
+  }
+}
+
 export function connectDetections(
   onDet: DetectionHandler,
   onSettings: SettingsHandler
@@ -80,8 +135,9 @@ function _connect() {
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data as string) as { type: string; detections?: Detection[]; settings?: Settings };
-      if (msg.type === 'detection' && onDetection && msg.detections) {
-        onDetection(msg.detections);
+      if (msg.type === 'detection' && msg.detections) {
+        _recordInferenceAttempt(msg.detections);
+        if (onDetection) onDetection(msg.detections);
       } else if (msg.type === 'settings_changed' && onSettingsChanged && msg.settings) {
         onSettingsChanged(msg.settings);
       }

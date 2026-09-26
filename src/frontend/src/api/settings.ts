@@ -8,6 +8,7 @@ const SETTINGS_COLUMNS = [
   'display_mode', 'margin_percent', 'lookback_window', 'max_species', 'species_sort',
   'latitude', 'longitude',
   'font_family', 'artwork_style', 'show_species_label', 'label_language',
+  'confidence_threshold',
 ].join(', ');
 
 export async function getSettings(): Promise<ApiResponse<Settings>> {

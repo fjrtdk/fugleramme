@@ -128,6 +128,14 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
               <option value="scientific">Scientific name</option>
             </select>
           </div>
+          <div class="setting-subheading" id="detection-subheading">
+            <span class="setting-subheading-label">Detection</span>
+            <span class="setting-subheading-hint">How confident BirdNET must be to report a bird</span>
+          </div>
+          <div class="setting-row" id="row-confidence-threshold">
+            <label class="setting-label" for="s-confidence-threshold">Confidence threshold <span id="s-confidence-threshold-val">0.50</span></label>
+            <input class="setting-range" type="range" id="s-confidence-threshold" min="0" max="1" step="0.05" value="0.5" />
+          </div>
           <div class="setting-row setting-row-actions">
             <button class="btn-save-settings" id="save-settings">Save settings</button>
             <span class="settings-save-status hidden" id="save-status"></span>
@@ -198,6 +206,13 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
     marginVal.textContent = marginSlider.value;
   });
 
+  // Confidence threshold slider live label
+  const confidenceSlider = container.querySelector<HTMLInputElement>('#s-confidence-threshold')!;
+  const confidenceVal = container.querySelector<HTMLElement>('#s-confidence-threshold-val')!;
+  confidenceSlider.addEventListener('input', () => {
+    confidenceVal.textContent = parseFloat(confidenceSlider.value).toFixed(2);
+  });
+
   // Font preview: update CSS variable live
   const fontSelect = container.querySelector<HTMLSelectElement>('#s-font-family')!;
   fontSelect.addEventListener('change', () => {
@@ -253,6 +268,8 @@ function populateSettingsForm(container: HTMLElement, s: Settings) {
   const artworkEl = container.querySelector<HTMLSelectElement>('#s-artwork-style');
   const showLabelEl = container.querySelector<HTMLInputElement>('#s-show-label');
   const labelLangEl = container.querySelector<HTMLSelectElement>('#s-label-lang');
+  const confidenceEl = container.querySelector<HTMLInputElement>('#s-confidence-threshold');
+  const confidenceValEl = container.querySelector<HTMLElement>('#s-confidence-threshold-val');
 
   if (modeEl) modeEl.value = s.display_mode;
   if (marginEl) { marginEl.value = String(s.margin_percent); }
@@ -266,6 +283,9 @@ function populateSettingsForm(container: HTMLElement, s: Settings) {
   if (artworkEl) artworkEl.value = s.artwork_style ?? 'classic';
   if (showLabelEl) showLabelEl.checked = s.show_species_label ?? true;
   if (labelLangEl) labelLangEl.value = s.label_language ?? 'common';
+  const confidenceThreshold = s.confidence_threshold ?? DEFAULT_SETTINGS.confidence_threshold;
+  if (confidenceEl) confidenceEl.value = String(confidenceThreshold);
+  if (confidenceValEl) confidenceValEl.textContent = confidenceThreshold.toFixed(2);
 
   updateCollageOnlyVisibility(s.display_mode);
 
@@ -299,6 +319,7 @@ async function saveSettings(container: HTMLElement) {
   const artworkEl = container.querySelector<HTMLSelectElement>('#s-artwork-style')!;
   const showLabelEl = container.querySelector<HTMLInputElement>('#s-show-label')!;
   const labelLangEl = container.querySelector<HTMLSelectElement>('#s-label-lang')!;
+  const confidenceEl = container.querySelector<HTMLInputElement>('#s-confidence-threshold')!;
   const saveBtn = container.querySelector<HTMLButtonElement>('#save-settings')!;
   const saveStatus = container.querySelector<HTMLElement>('#save-status')!;
 
@@ -338,6 +359,7 @@ async function saveSettings(container: HTMLElement) {
     artwork_style: artworkEl.value as Settings['artwork_style'],
     show_species_label: showLabelEl.checked,
     label_language: labelLangEl.value as Settings['label_language'],
+    confidence_threshold: parseFloat(confidenceEl.value),
   };
 
   saveBtn.disabled = true;

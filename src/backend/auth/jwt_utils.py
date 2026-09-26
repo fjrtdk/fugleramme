@@ -94,3 +94,32 @@ async def validate_supabase_token(token: str, request_origin: str) -> str | None
     except httpx.HTTPError:
         logger.warning("Supabase token validation request failed", exc_info=True)
         return None
+
+
+async def fetch_confidence_threshold(
+    token: str, request_origin: str, default: float = 0.5
+) -> float:
+    """Fetch the user's ``confidence_threshold`` setting via Supabase PostgREST.
+
+    Returns ``default`` on any failure (no row, network error, RLS denial)
+    so inference always has a usable threshold.
+    """
+    base_url = (settings.supabase_url or request_origin).rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{base_url}/rest/v1/user_settings",
+                params={"select": "confidence_threshold"},
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "apikey": settings.supabase_anon_key,
+                },
+            )
+        if resp.status_code == 200:
+            rows = resp.json()
+            if rows and rows[0].get("confidence_threshold") is not None:
+                return float(rows[0]["confidence_threshold"])
+        return default
+    except (httpx.HTTPError, ValueError, TypeError, KeyError):
+        logger.warning("Fetching confidence_threshold failed; using default", exc_info=True)
+        return default
