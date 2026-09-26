@@ -1,9 +1,9 @@
 /**
  * Artwork path resolution.
  *
- * Artwork filenames use kebab-case scientific names:
- *   "Turdus merula"  → "turdus-merula.webp"
- *   "Accipiter nisus" → "accipiter-nisus.webp"
+ * Artwork filenames use kebab-case scientific names under /artwork/{style}/:
+ *   "Turdus merula"  → "/artwork/classic/turdus-merula.webp"
+ *   "Accipiter nisus" → "/artwork/classic/accipiter-nisus.webp"
  *
  * birdnet_aliases.json maps old BirdNET taxonomy to current taxonomy:
  *   "Streptopelia chinensis" → "Spilopelia chinensis"
@@ -57,7 +57,7 @@ export async function resolveArtworkPath(
   const aliases = await loadAliases();
   // Apply taxonomy alias if present
   const canonical = aliases[scientificName] ?? scientificName;
-  return `/artwork/${style}/birds/${toKebab(canonical)}.webp`;
+  return `/artwork/${style}/${toKebab(canonical)}.webp`;
 }
 
 /**
@@ -72,5 +72,5 @@ export function resolveArtworkPathSync(
   if (!scientificName) return null;
   const aliases = aliasCache ?? {};
   const canonical = aliases[scientificName] ?? scientificName;
-  return `/artwork/${style}/birds/${toKebab(canonical)}.webp`;
+  return `/artwork/${style}/${toKebab(canonical)}.webp`;
 }
