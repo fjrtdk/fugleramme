@@ -27,6 +27,17 @@ class Settings:
     jwt_secret: str = _load_or_create_jwt_secret()
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
+    # Supabase (or Verdent's same-origin BaaS proxy) issues its own JWTs for
+    # frontend sessions; WebSocket auth must be able to validate those too.
+    supabase_jwt_secret: str | None = os.getenv("SUPABASE_JWT_SECRET")
+    # WebSocket auth validates Supabase session tokens via the Supabase Auth
+    # REST API (GET /auth/v1/user) rather than local JWT decoding, since the
+    # project's Supabase JWT secret is not available to this backend.  When
+    # SUPABASE_URL is unset, the request's own origin is used — this matches
+    # the frontend's fallback (window.location.origin) and works with
+    # Verdent's same-origin BaaS proxy.
+    supabase_url: str | None = os.getenv("SUPABASE_URL")
+    supabase_anon_key: str = os.getenv("SUPABASE_ANON_KEY", "verdent-baas-proxy")
     database_path: str = os.getenv("DATABASE_PATH", "fugleramme.db")
     # Directory containing the compiled frontend SPA (Vite dist output).
     # Set to an absolute path in production via the FRONTEND_DIR env var.

@@ -17,7 +17,7 @@ import aiosqlite
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
-from src.backend.auth.jwt_utils import decode_token
+from src.backend.auth.jwt_utils import decode_token, validate_supabase_token
 from src.backend.birdnet import birdnet_state
 from src.backend.birdnet.inference import run_inference
 from src.backend.config import settings
@@ -165,13 +165,20 @@ async def audio_ws(websocket: WebSocket, token: str | None = None):
     await websocket.accept()
 
     # ── Auth ──────────────────────────────────────────────────────────────────
+    # Validate Supabase (or Verdent BaaS proxy) tokens via the Supabase Auth
+    # API — no JWT secret needed.  Fall back to local app-JWT decoding for
+    # local dev where /auth/* issues its own tokens.
     user_id: str | None = None
     if token:
-        try:
-            payload = decode_token(token)
-            user_id = payload["sub"]
-        except (JWTError, KeyError):
-            user_id = None
+        scheme = "https" if websocket.url.scheme == "wss" else "http"
+        origin = f"{scheme}://{websocket.url.netloc}"
+        user_id = await validate_supabase_token(token, origin)
+        if user_id is None:
+            try:
+                payload = decode_token(token)
+                user_id = payload["sub"]
+            except (JWTError, KeyError):
+                user_id = None
 
     if user_id is None:
         await websocket.close(code=4001)
