@@ -1,4 +1,4 @@
-import { logout } from '../api/auth';
+import { supabase } from '../lib/supabase';
 import { getSettings, putSettings } from '../api/settings';
 import { state } from '../state';
 import { navigate } from '../router';
@@ -81,7 +81,7 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
 
   // Logout
   container.querySelector('#logout-btn')!.addEventListener('click', async () => {
-    await logout();
+    await supabase.auth.signOut();
     state.setToken(null);
     state.setUser(null);
     state.setSettings(null);

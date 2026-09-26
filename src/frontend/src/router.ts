@@ -1,5 +1,5 @@
 import { state } from './state';
-import { getMe } from './api/auth';
+import { supabase, supabaseUserToAppUser } from './lib/supabase';
 import { getSettings } from './api/settings';
 import { getSpecies as fetchSpecies } from './api/species';
 import { renderLogin } from './views/login';
@@ -37,12 +37,11 @@ async function route() {
   // Check auth for protected routes
   if (['dashboard', 'onboarding'].includes(hash)) {
     if (!state.isAuthenticated()) {
-      // Try to restore session via cookie
-      const res = await getMe();
-      if (res.data) {
-        state.setUser(res.data);
-        // Token is in memory only — WS won't work until user re-logs in manually
-        // But we can still show the dashboard for non-WS features
+      // Restore session from Supabase (persisted in localStorage by the client)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        state.setToken(session.access_token);
+        state.setUser(supabaseUserToAppUser(session.user));
       } else {
         navigate('login');
         return;
@@ -133,6 +132,26 @@ function flipToDashboard() {
 }
 
 export function initRouter() {
+  // Mirror Supabase auth events into app state and drive navigation
+  supabase.auth.onAuthStateChange((event, session) => {
+    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+      state.setToken(session.access_token);
+      state.setUser(supabaseUserToAppUser(session.user));
+      if (event === 'SIGNED_IN') {
+        const appUser = state.getUser()!;
+        const current = (location.hash.replace('#', '') || 'login') as Route;
+        if (current === 'login' || current === 'register') {
+          navigate(appUser.onboarding_seen ? 'dashboard' : 'onboarding');
+        }
+      }
+    } else if (event === 'SIGNED_OUT') {
+      state.setToken(null);
+      state.setUser(null);
+      state.setSettings(null);
+      navigate('login');
+    }
+  });
+
   window.addEventListener('hashchange', () => { route(); });
   route();
 }

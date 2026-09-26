@@ -12,5 +12,9 @@
   "devDependencies": {
     "typescript": "^5.4.0",
     "vite": "^5.2.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "@verdent/auth-js": "0.1.9"
   }
 }

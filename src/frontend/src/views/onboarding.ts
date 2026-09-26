@@ -1,4 +1,5 @@
 import { patchMe } from '../api/auth';
+import { supabase } from '../lib/supabase';
 import { state } from '../state';
 import { navigate } from '../router';
 
@@ -21,7 +22,12 @@ export function renderOnboarding(container: HTMLElement) {
   `;
 
   container.querySelector('#get-started')!.addEventListener('click', async () => {
-    await patchMe({ onboarding_seen: true });
+    // Update onboarding_seen in both the Python backend (when available) and
+    // Supabase user_metadata (persists across sessions in the hosted environment)
+    await Promise.allSettled([
+      patchMe({ onboarding_seen: true }),
+      supabase.auth.updateUser({ data: { onboarding_seen: true } }),
+    ]);
     const u = state.getUser();
     if (u) state.setUser({ ...u, onboarding_seen: true });
     navigate('dashboard');
