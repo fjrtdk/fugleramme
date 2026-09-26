@@ -1,17 +1,17 @@
 """BirdNET inference pipeline.
 
-Takes the three 32 768-byte PCM frames that the audio WebSocket accumulates,
+Takes the three 32 000-byte PCM frames that the audio WebSocket accumulates,
 resamples from 16 kHz to 48 kHz (BirdNET's native rate), runs TFLite
 inference, and returns the detections above the confidence threshold.
 
 Buffer arithmetic
 ─────────────────
-  3 frames × 32 768 bytes ÷ 2 bytes per int16 sample = 49 152 samples @ 16 kHz
+  3 frames × 32 000 bytes ÷ 2 bytes per int16 sample = 48 000 samples @ 16 kHz
   Target: 144 000 samples @ 48 kHz  (3 s × 48 000 Hz)
 
-  The upsampling ratio is 144 000 / 49 152 = ~2.93, so integer repeat is
-  not exact.  We use numpy.interp for linear resampling — no scipy needed,
-  correct output length guaranteed.
+  The upsampling ratio is 144 000 / 48 000 = 3.0, so every source sample is
+  repeated three times.  We use numpy.interp for linear resampling — no scipy
+  needed, correct output length guaranteed.
 """
 
 import logging
@@ -47,7 +47,7 @@ def run_inference(
     """Run BirdNET inference on a 3-frame PCM buffer.
 
     Args:
-        buffer: Exactly 3 binary frames, each 32 768 bytes
+        buffer: Exactly 3 binary frames, each 32 000 bytes
                 (16 kHz, PCM 16-bit signed little-endian, mono).
         state:  Loaded :class:`BirdNetState`.
         top_n:  Maximum species to consider (sorted by confidence desc,

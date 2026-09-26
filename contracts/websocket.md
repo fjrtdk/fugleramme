@@ -44,11 +44,11 @@ Client                          Server
   |    OR                         |
   |<-- 401 Unauthorized ----------|  (token missing/invalid)
   |                               |
-  |--- binary frame (32 KB) ----->|
-  |--- binary frame (32 KB) ----->|
-  |--- binary frame (32 KB) ----->|
+  |--- binary frame (32 000 bytes) ----->|
+  |--- binary frame (32 000 bytes) ----->|
+  |--- binary frame (32 000 bytes) ----->|
   |<-- JSON: detection result ----|  (after 3 frames buffered)
-  |--- binary frame (32 KB) ----->|
+  |--- binary frame (32 000 bytes) ----->|
   ...
   |--- close (1000 Normal) ------>|  (user returns to dashboard)
   |<-- close (1000 Normal) -------|
@@ -64,9 +64,9 @@ Each WebSocket message is a **binary frame** containing exactly one second of au
 | Sample rate | 16 000 Hz |
 | Channels | Mono (1 channel) |
 | Frame duration | 1 second |
-| Frame size | 16 000 samples × 2 bytes = **32 768 bytes** |
+| Frame size | 16 000 samples × 2 bytes = **32 000 bytes** (1 second of 16 kHz mono 16-bit PCM) |
 
-The frontend resamples from the device's native sample rate to 16 kHz before sending. Frames must be exactly 32 768 bytes; frames of any other size are discarded and the server sends an `error` message.
+The frontend resamples from the device's native sample rate to 16 kHz before sending. Frames must be exactly 32 000 bytes; frames of any other size are discarded and the server sends an `error` message.
 
 ### Server message: detection result (server → client)
 
@@ -121,7 +121,7 @@ Sent when the server encounters a recoverable error (malformed frame, inference 
 
 | Code | Cause |
 |---|---|
-| `FRAME_SIZE_INVALID` | Binary frame was not exactly 32 768 bytes |
+| `FRAME_SIZE_INVALID` | Binary frame was not exactly 32 000 bytes |
 | `INFERENCE_FAILED` | BirdNET model raised an exception; buffered audio discarded |
 | `AUDIO_FORMAT_INVALID` | Frame contained non-PCM or corrupt data |
 

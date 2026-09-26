@@ -6,9 +6,9 @@ Usage in main.py lifespan:
     await seed_species_if_empty(db)         # seeds species table once
 
 Usage in ws/audio.py:
-    from src.backend.birdnet import birdnet_state
+    from src.backend import birdnet as birdnet_mod
     from src.backend.birdnet.inference import run_inference
-    detections = run_inference(buffer, birdnet_state)
+    detections = run_inference(buffer, birdnet_mod.birdnet_state)
 """
 
 import logging

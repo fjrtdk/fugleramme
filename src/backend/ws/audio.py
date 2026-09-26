@@ -1,6 +1,6 @@
 """WebSocket audio upstream: /ws/audio
 
-Accepts binary PCM frames from the client (16 kHz, PCM int16 mono, 32 768 bytes
+Accepts binary PCM frames from the client (16 kHz, PCM int16 mono, 32 000 bytes
 each), accumulates 3-frame buffers, runs BirdNET TFLite inference, persists
 detections to SQLite, and broadcasts results to /ws/detections clients.
 
@@ -22,7 +22,7 @@ from src.backend.auth.jwt_utils import (
     fetch_confidence_threshold,
     validate_supabase_token,
 )
-from src.backend.birdnet import birdnet_state
+from src.backend import birdnet as birdnet_mod
 from src.backend.birdnet.inference import run_inference
 from src.backend.config import settings
 from src.backend.ws.manager import manager
@@ -30,7 +30,7 @@ from src.backend.ws.manager import manager
 router = APIRouter(tags=["ws"])
 logger = logging.getLogger("fugleramme.ws.audio")
 
-_FRAME_BYTES = 32_768   # 1 s × 16 000 samples × 2 bytes  (see contracts/websocket.md)
+_FRAME_BYTES = 32_000   # 1 s × 16 000 samples × 2 bytes  (see contracts/websocket.md)
 _BUFFER_FRAMES = 3      # 3 s inference window
 
 
@@ -79,10 +79,10 @@ async def _process_buffer(
         "_process_buffer entry user=%s frames=%d model_loaded=%s",
         user_id,
         len(buffer),
-        birdnet_state is not None,
+        birdnet_mod.birdnet_state is not None,
     )
 
-    if birdnet_state is None:
+    if birdnet_mod.birdnet_state is None:
         await websocket.send_text(
             _error_msg(
                 "INFERENCE_FAILED",
@@ -96,7 +96,7 @@ async def _process_buffer(
 
     try:
         detections = run_inference(
-            buffer, birdnet_state, confidence_threshold=confidence_threshold
+            buffer, birdnet_mod.birdnet_state, confidence_threshold=confidence_threshold
         )
     except Exception as exc:
         logger.exception("run_inference raised unexpectedly: %s", exc)
@@ -216,8 +216,15 @@ async def audio_ws(websocket: WebSocket, token: str | None = None):
         try:
             while True:
                 data = await websocket.receive_bytes()
+                logger.info("audio frame received user=%s bytes=%d", user_id, len(data))
 
                 if len(data) != _FRAME_BYTES:
+                    logger.info(
+                        "audio frame size invalid user=%s expected=%d got=%d",
+                        user_id,
+                        _FRAME_BYTES,
+                        len(data),
+                    )
                     await websocket.send_text(
                         _error_msg(
                             "FRAME_SIZE_INVALID",

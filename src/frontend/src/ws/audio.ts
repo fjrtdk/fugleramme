@@ -118,7 +118,9 @@ export async function startAudio() {
       if (accumulatorPos >= FRAME_SAMPLES) {
         // Send frame if WS is open
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(accumulator.buffer.slice(0));
+          const frameBuffer = accumulator.buffer.slice(0);
+          ws.send(frameBuffer);
+          log('WS_AUDIO', `sent frame (${frameBuffer.byteLength} bytes)`);
         }
         accumulatorPos = 0;
         accumulator = new Int16Array(FRAME_SAMPLES);
@@ -165,9 +167,18 @@ function _connectWs() {
     log('WS_AUDIO', 'connected');
   };
 
-  ws.onmessage = (_event) => {
+  ws.onmessage = (event) => {
     // Server sends JSON detection confirmations — ignore in audio WS handler;
-    // the detections WS handles display updates
+    // the detections WS handles display updates. Still log warnings/errors
+    // so protocol issues (e.g. frame-size mismatches) are visible.
+    try {
+      const msg = JSON.parse(event.data as string);
+      if (msg?.type === 'error') {
+        log('WS_AUDIO', `received error: ${msg.code ?? 'unknown'} — ${msg.message ?? ''}`);
+      }
+    } catch {
+      log('WS_AUDIO', `received unparseable message: ${String(event.data).slice(0, 200)}`);
+    }
   };
 
   ws.onclose = (event) => {
