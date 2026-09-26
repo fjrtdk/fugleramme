@@ -12,7 +12,6 @@ Usage in ws/audio.py:
 """
 
 import logging
-from pathlib import Path
 
 import aiosqlite
 
@@ -34,19 +33,13 @@ def load_birdnet() -> None:
     birdnet_state = load_model()
 
 
-def _illustration_path(scientific_name: str) -> str | None:
-    """Derive the server-relative illustration path from a scientific name.
+def _illustration_path(_scientific_name: str) -> None:
+    """Artwork paths are resolved client-side from the current style setting.
 
-    Returns the path string if the file exists on disk, else None.
-
-    Convention (from contracts/schema.md):
-        assets/artwork/{genus}_{species}.png
+    The bundled illustrations live under /artwork/{style}/birds/{kebab}.webp;
+    the frontend already maps BirdNET taxonomy and checks file existence.
+    Returning None lets the display layer pick the correct path.
     """
-    filename = scientific_name.lower().replace(" ", "_") + ".png"
-    server_path = f"/assets/artwork/{filename}"
-    # Only set the path if @Content has supplied the file.
-    if Path(f"assets/artwork/{filename}").exists():
-        return server_path
     return None
 
 

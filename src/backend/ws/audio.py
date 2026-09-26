@@ -11,7 +11,6 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 
 import aiosqlite
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -41,11 +40,13 @@ def _error_msg(code: str, message: str) -> str:
     return json.dumps({"type": "error", "code": code, "message": message})
 
 
-def _illustration_path(scientific_name: str) -> str | None:
-    """Derive server-relative illustration path; return None if file absent."""
-    filename = scientific_name.lower().replace(" ", "_") + ".png"
-    if Path(f"assets/artwork/{filename}").exists():
-        return f"/assets/artwork/{filename}"
+def _illustration_path(_scientific_name: str) -> None:
+    """Artwork paths are resolved client-side from the current style setting.
+
+    The bundled illustrations live under /artwork/{style}/birds/{kebab}.webp;
+    the frontend already maps BirdNET taxonomy and checks file existence.
+    Returning None lets the display layer pick the correct path.
+    """
     return None
 
 
