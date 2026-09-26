@@ -1,5 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { state } from '../state';
+import { getTail, getEntries } from '../lib/logger';
+import { getAudioWsState } from '../ws/audio';
+import { getDetectionsWsState } from '../ws/detections';
 
 type RowStatus = 'ok' | 'warn' | 'error' | 'neutral';
 
@@ -44,6 +47,30 @@ export function renderDiagnostics(container: HTMLElement): void {
           <span class="diag-test-result hidden" id="diag-ws-result"></span>
         </div>
       </div>
+      <div class="diag-section">
+        <h3 class="diag-section-title">Doctor Report</h3>
+        <div class="diag-action-row">
+          <button class="btn-diag-test" id="diag-run-doctor">Run Doctor</button>
+          <button class="btn-diag-test btn-diag-copy hidden" id="diag-copy-report">Copy Report</button>
+          <span class="diag-test-result hidden" id="diag-doctor-status"></span>
+        </div>
+        <div class="diag-report-wrap hidden" id="diag-report-wrap">
+          <textarea class="diag-report" id="diag-report" readonly spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="diag-section diag-section--log">
+        <button class="diag-log-toggle" id="diag-log-toggle" type="button">
+          <span>Debug Log</span>
+          <span class="diag-log-count" id="diag-log-count"></span>
+          <span class="diag-log-chevron" id="diag-log-chevron">▶</span>
+        </button>
+        <div class="diag-log-body hidden" id="diag-log-body">
+          <div class="diag-action-row">
+            <button class="btn-diag-test" id="diag-log-refresh">Refresh</button>
+          </div>
+          <div class="diag-log-entries" id="diag-log-entries"></div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -56,6 +83,7 @@ async function initAll(container: HTMLElement): Promise<void> {
   await renderSupabaseSection(container);
   renderWsSection(container);
   bindActions(container);
+  updateLogCount(container);
 }
 
 // ── Browser ───────────────────────────────────────────────────
@@ -238,11 +266,114 @@ function renderWsSection(container: HTMLElement): void {
   setRows(container, 'diag-ws-rows', rows);
 }
 
+// ── Doctor Report ─────────────────────────────────────────────
+
+async function buildDoctorReport(): Promise<string> {
+  const lines: string[] = [];
+  const wsStateLabels: Record<number, string> = {
+    [WebSocket.CONNECTING]: 'connecting',
+    [WebSocket.OPEN]: 'connected',
+    [WebSocket.CLOSING]: 'closing',
+    [WebSocket.CLOSED]: 'closed',
+  };
+
+  lines.push('=== Fugleramme Doctor ===');
+  lines.push(`Timestamp: ${new Date().toISOString()}`);
+  lines.push(`Browser: ${navigator.userAgent}`);
+  lines.push(`Secure Context: ${window.isSecureContext ? '✅' : '❌'}`);
+  lines.push(`MediaDevices API: ${typeof navigator.mediaDevices !== 'undefined' ? '✅' : '❌'}`);
+
+  // Mic permission
+  let micPermission = 'unknown';
+  if (navigator.permissions) {
+    try {
+      const r = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+      micPermission = r.state;
+    } catch {
+      micPermission = 'query failed';
+    }
+  } else {
+    micPermission = 'Permissions API not available';
+  }
+  lines.push(`Microphone Permission: ${micPermission}`);
+
+  // Mic test (only if permission already granted — don't prompt)
+  if (micPermission === 'granted') {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const label = stream.getAudioTracks()[0]?.label || 'unknown device';
+      stream.getTracks().forEach(t => t.stop());
+      lines.push(`Mic Test: ✅ (device: "${label}")`);
+    } catch (e) {
+      lines.push(`Mic Test: ❌ ${(e as Error).message}`);
+    }
+  } else {
+    lines.push(`Mic Test: skipped (permission: ${micPermission})`);
+  }
+
+  // Audio devices
+  if (navigator.mediaDevices?.enumerateDevices) {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioIn = devices.filter(d => d.kind === 'audioinput');
+      lines.push(`Audio Devices: ${audioIn.length} found`);
+      audioIn.forEach((d, i) => {
+        const label = d.label || `[unlabelled — ${d.deviceId.slice(0, 8)}…]`;
+        lines.push(`  - ${label}${i === 0 ? ' (default)' : ''}`);
+      });
+    } catch (e) {
+      lines.push(`Audio Devices: Error — ${(e as Error).message}`);
+    }
+  }
+
+  // Supabase
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      lines.push(`Supabase: ❌ ${error.message}`);
+    } else if (data.session) {
+      const identity = data.session.user.email ?? data.session.user.id;
+      lines.push(`Supabase: ✅ authenticated (${identity})`);
+      const expiresAt = data.session.expires_at;
+      if (expiresAt) {
+        lines.push(`Token Expiry: ${new Date(expiresAt * 1000).toISOString()}`);
+      }
+    } else {
+      lines.push('Supabase: ⚠️ no active session');
+    }
+  } catch (e) {
+    lines.push(`Supabase: ❌ exception: ${(e as Error).message}`);
+  }
+
+  // WebSocket live state
+  const audioState = getAudioWsState();
+  const detState = getDetectionsWsState();
+  lines.push(`WebSocket Audio: ${audioState === WebSocket.OPEN ? '✅' : '⚠️'} ${wsStateLabels[audioState] ?? 'unknown'}`);
+  lines.push(`WebSocket Detections: ${detState === WebSocket.OPEN ? '✅' : '⚠️'} ${wsStateLabels[detState] ?? 'unknown'}`);
+
+  // Debug log tail
+  lines.push('');
+  lines.push('=== Debug Log (last 50 entries) ===');
+  const tail = getTail(50);
+  if (tail.length === 0) {
+    lines.push('(no entries yet)');
+  } else {
+    tail.forEach(e => {
+      lines.push(`[${e.ts}] ${e.tag}: ${e.msg}`);
+    });
+  }
+  lines.push('=== End Report ===');
+
+  return lines.join('\n');
+}
+
 // ── Actions ───────────────────────────────────────────────────
 
 function bindActions(container: HTMLElement): void {
   bindMicTest(container);
   bindWsTest(container);
+  bindDoctor(container);
+  bindLogSection(container);
 }
 
 function bindMicTest(container: HTMLElement): void {
@@ -337,6 +468,111 @@ function bindWsTest(container: HTMLElement): void {
       finish(`Exception: ${(e as Error).message}`, 'error');
     }
   });
+}
+
+function bindDoctor(container: HTMLElement): void {
+  const runBtn = container.querySelector<HTMLButtonElement>('#diag-run-doctor');
+  const copyBtn = container.querySelector<HTMLButtonElement>('#diag-copy-report');
+  const statusEl = container.querySelector<HTMLElement>('#diag-doctor-status');
+  const reportWrap = container.querySelector<HTMLElement>('#diag-report-wrap');
+  const reportEl = container.querySelector<HTMLTextAreaElement>('#diag-report');
+  if (!runBtn || !copyBtn || !statusEl || !reportWrap || !reportEl) return;
+
+  runBtn.addEventListener('click', async () => {
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running…';
+    statusEl.className = 'diag-test-result hidden';
+    copyBtn.classList.add('hidden');
+
+    try {
+      const report = await buildDoctorReport();
+      reportEl.value = report;
+      reportWrap.classList.remove('hidden');
+      copyBtn.classList.remove('hidden');
+      statusEl.textContent = 'Report ready';
+      statusEl.className = 'diag-test-result ok';
+      // Also refresh the log display
+      renderLogEntries(container);
+      updateLogCount(container);
+    } catch (e) {
+      statusEl.textContent = `Error: ${(e as Error).message}`;
+      statusEl.className = 'diag-test-result error';
+    } finally {
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run Doctor';
+    }
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    const text = reportEl.value;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const orig = copyBtn.textContent;
+      copyBtn.textContent = 'Copied!';
+      copyBtn.disabled = true;
+      setTimeout(() => {
+        copyBtn.textContent = orig;
+        copyBtn.disabled = false;
+      }, 1500);
+    } catch {
+      // Fallback: select all text so user can copy manually
+      reportEl.select();
+    }
+  });
+}
+
+function bindLogSection(container: HTMLElement): void {
+  const toggle = container.querySelector<HTMLButtonElement>('#diag-log-toggle');
+  const body = container.querySelector<HTMLElement>('#diag-log-body');
+  const chevron = container.querySelector<HTMLElement>('#diag-log-chevron');
+  const refreshBtn = container.querySelector<HTMLButtonElement>('#diag-log-refresh');
+  if (!toggle || !body || !chevron) return;
+
+  toggle.addEventListener('click', () => {
+    const isOpen = !body.classList.contains('hidden');
+    if (isOpen) {
+      body.classList.add('hidden');
+      chevron.textContent = '▶';
+      toggle.classList.remove('active');
+    } else {
+      body.classList.remove('hidden');
+      chevron.textContent = '▼';
+      toggle.classList.add('active');
+      renderLogEntries(container);
+      updateLogCount(container);
+    }
+  });
+
+  refreshBtn?.addEventListener('click', () => {
+    renderLogEntries(container);
+    updateLogCount(container);
+  });
+}
+
+function renderLogEntries(container: HTMLElement): void {
+  const el = container.querySelector<HTMLElement>('#diag-log-entries');
+  if (!el) return;
+  const entries = getEntries();
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="diag-log-empty">No log entries yet.</div>';
+    return;
+  }
+  // Show newest first
+  el.innerHTML = [...entries].reverse().map(e =>
+    `<div class="diag-log-entry">` +
+    `<span class="diag-log-ts">${escapeHtml(e.ts)}</span>` +
+    `<span class="diag-log-tag">${escapeHtml(e.tag)}</span>` +
+    `<span class="diag-log-msg">${escapeHtml(e.msg)}</span>` +
+    `</div>`
+  ).join('');
+}
+
+function updateLogCount(container: HTMLElement): void {
+  const el = container.querySelector<HTMLElement>('#diag-log-count');
+  if (!el) return;
+  const n = getEntries().length;
+  el.textContent = n > 0 ? `(${n})` : '';
 }
 
 // ── Helpers ───────────────────────────────────────────────────

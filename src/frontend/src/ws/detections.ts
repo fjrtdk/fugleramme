@@ -1,5 +1,6 @@
 import type { Detection, Settings } from '../types';
 import { state } from '../state';
+import { log } from '../lib/logger';
 
 type DetectionHandler = (detections: Detection[]) => void;
 type SettingsHandler = (settings: Settings) => void;
@@ -12,6 +13,11 @@ const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000];
 let onDetection: DetectionHandler | null = null;
 let onSettingsChanged: SettingsHandler | null = null;
 let intentionallyClosed = false;
+
+/** Current WebSocket readyState for the detections connection. */
+export function getDetectionsWsState(): number {
+  return ws?.readyState ?? WebSocket.CLOSED;
+}
 
 export function connectDetections(
   onDet: DetectionHandler,
@@ -26,6 +32,7 @@ export function connectDetections(
 
 export function disconnectDetections() {
   intentionallyClosed = true;
+  log('WS_DET', 'intentionally disconnected');
   if (retryTimer) clearTimeout(retryTimer);
   if (ws) {
     ws.close(1000);
@@ -39,11 +46,15 @@ function _connect() {
 
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const url = `${protocol}//${location.host}/ws/detections?token=${encodeURIComponent(token)}`;
+  log('WS_DET', 'connecting…');
 
   ws = new WebSocket(url);
   ws.binaryType = 'arraybuffer';
 
-  ws.onopen = () => { retryCount = 0; };
+  ws.onopen = () => {
+    retryCount = 0;
+    log('WS_DET', 'connected');
+  };
 
   ws.onmessage = (event) => {
     try {
@@ -57,16 +68,24 @@ function _connect() {
   };
 
   ws.onclose = (event) => {
+    log('WS_DET', `closed (code ${event.code})`);
     if (intentionallyClosed) return;
-    if (event.code === 4001) return; // auth failure, don't retry
+    if (event.code === 4001) {
+      log('WS_DET', 'auth rejected (4001) — not retrying');
+      return;
+    }
     _scheduleRetry();
   };
 
-  ws.onerror = () => { ws?.close(); };
+  ws.onerror = () => {
+    log('WS_DET', 'error');
+    ws?.close();
+  };
 }
 
 function _scheduleRetry() {
   if (retryCount >= RETRY_DELAYS.length) return;
   const delay = RETRY_DELAYS[retryCount++];
+  log('WS_DET', `retry in ${delay}ms (attempt ${retryCount})`);
   retryTimer = setTimeout(_connect, delay);
 }

@@ -1068,6 +1068,135 @@
   border: var(--border-thin) solid var(--color-error-border);
 }
 
+/* ── Doctor Report ────────────────────────────────────────── */
+
+.btn-diag-copy {
+  background: var(--color-forest-700);
+}
+
+.btn-diag-copy:hover:not(:disabled) {
+  background: var(--color-forest-800);
+}
+
+.diag-report-wrap {
+  padding: var(--space-3) var(--card-padding-md);
+  background: var(--color-paper-200);
+  border-top: var(--border-hairline) solid var(--color-dash-border);
+}
+
+.diag-report {
+  width: 100%;
+  min-height: 200px;
+  max-height: 400px;
+  padding: var(--space-3);
+  background: var(--color-ink-900);
+  color: var(--color-paper-200);
+  border: var(--border-thin) solid var(--color-ink-700);
+  border-radius: var(--radius-xs);
+  font-family: "Courier New", Courier, "Lucida Console", monospace;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  resize: vertical;
+  white-space: pre;
+  overflow: auto;
+}
+
+/* ── Debug Log Section ────────────────────────────────────── */
+
+.diag-section--log {
+  border-bottom: none;
+}
+
+.diag-log-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--card-padding-md) var(--space-1);
+  background: var(--color-paper-200);
+  border: none;
+  border-bottom: var(--border-hairline) solid var(--color-dash-border);
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-dash-text-muted);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--micro-button-hover) var(--ease-out);
+}
+
+.diag-log-toggle:hover,
+.diag-log-toggle.active {
+  color: var(--color-forest-700);
+}
+
+.diag-log-count {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-ink-400);
+  letter-spacing: var(--letter-spacing-normal);
+  text-transform: none;
+}
+
+.diag-log-chevron {
+  margin-left: auto;
+  font-size: 0.6rem;
+  color: var(--color-ink-400);
+}
+
+.diag-log-body {
+  border-top: var(--border-hairline) solid var(--color-dash-border);
+}
+
+.diag-log-entries {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.diag-log-entry {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--card-padding-md);
+  border-bottom: var(--border-hairline) solid var(--color-dash-border);
+  font-family: "Courier New", Courier, "Lucida Console", monospace;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  min-height: 0;
+}
+
+.diag-log-entry:last-child {
+  border-bottom: none;
+}
+
+.diag-log-ts {
+  color: var(--color-ink-400);
+  flex-shrink: 0;
+}
+
+.diag-log-tag {
+  color: var(--color-forest-600);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.diag-log-msg {
+  color: var(--color-dash-text);
+  word-break: break-all;
+}
+
+.diag-log-empty {
+  padding: var(--space-3) var(--card-padding-md);
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-xs);
+  color: var(--color-dash-text-muted);
+  font-style: italic;
+}
+
 /* ── Responsive: Tablet ───────────────────────────────────── */
 
 @media (min-width: 768px) {

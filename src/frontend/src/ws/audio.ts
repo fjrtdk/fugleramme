@@ -1,4 +1,5 @@
 import { state } from '../state';
+import { log } from '../lib/logger';
 
 export type MicStatus = 'idle' | 'requesting' | 'recording' | 'muted' | 'denied' | 'error';
 
@@ -25,18 +26,27 @@ function emitStatus(s: MicStatus) {
   onStatusChange?.(s);
 }
 
+/** Current WebSocket readyState for the audio connection. */
+export function getAudioWsState(): number {
+  return ws?.readyState ?? WebSocket.CLOSED;
+}
+
 export async function startAudio() {
   intentionallyStopped = false;
   retryCount = 0;
   emitStatus('requesting');
+  log('MIC', 'getUserMedia requesting…');
 
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: { channelCount: 1, sampleRate: { ideal: TARGET_SAMPLE_RATE } },
       video: false,
     });
+    const label = mediaStream.getAudioTracks()[0]?.label || 'unknown device';
+    log('MIC', `getUserMedia success — "${label}"`);
   } catch (err: unknown) {
-    const error = err as { name?: string };
+    const error = err as { name?: string; message?: string };
+    log('MIC', `getUserMedia error: ${error.name ?? 'unknown'} — ${error.message ?? ''}`);
     if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
       emitStatus('denied');
     } else {
@@ -96,6 +106,7 @@ export async function startAudio() {
 
 export function stopAudio() {
   intentionallyStopped = true;
+  log('WS_AUDIO', 'intentionally stopped');
   if (wsRetryTimer) clearTimeout(wsRetryTimer);
   if (ws) { ws.close(1000); ws = null; }
   if (scriptProcessor) { scriptProcessor.disconnect(); scriptProcessor = null; }
@@ -111,11 +122,15 @@ function _connectWs() {
 
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const url = `${protocol}//${location.host}/ws/audio?token=${encodeURIComponent(token)}`;
+  log('WS_AUDIO', 'connecting…');
 
   ws = new WebSocket(url);
   ws.binaryType = 'arraybuffer';
 
-  ws.onopen = () => { retryCount = 0; };
+  ws.onopen = () => {
+    retryCount = 0;
+    log('WS_AUDIO', 'connected');
+  };
 
   ws.onmessage = (_event) => {
     // Server sends JSON detection confirmations — ignore in audio WS handler;
@@ -123,12 +138,19 @@ function _connectWs() {
   };
 
   ws.onclose = (event) => {
+    log('WS_AUDIO', `closed (code ${event.code})`);
     if (intentionallyStopped) return;
-    if (event.code === 4001) return;
+    if (event.code === 4001) {
+      log('WS_AUDIO', 'auth rejected (4001) — not retrying');
+      return;
+    }
     _scheduleWsRetry();
   };
 
-  ws.onerror = () => { ws?.close(); };
+  ws.onerror = () => {
+    log('WS_AUDIO', 'error');
+    ws?.close();
+  };
 }
 
 function _scheduleWsRetry() {
@@ -137,6 +159,7 @@ function _scheduleWsRetry() {
     return;
   }
   const delay = RETRY_DELAYS[retryCount++];
+  log('WS_AUDIO', `retry in ${delay}ms (attempt ${retryCount})`);
   wsRetryTimer = setTimeout(_connectWs, delay);
 }
 

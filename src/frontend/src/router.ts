@@ -8,6 +8,7 @@ import { renderOnboarding } from './views/onboarding';
 import { renderDashboard } from './views/dashboard';
 import { renderDisplay, cleanupDisplay } from './views/display';
 import { renderPrivacy } from './views/privacy';
+import { log } from './lib/logger';
 
 const app = () => document.getElementById('app')!;
 
@@ -25,6 +26,7 @@ let isDisplayActive = false;
 
 async function route() {
   const hash = (location.hash.replace('#', '') || 'login') as Route;
+  log('ROUTER', `navigate → ${hash}`);
 
   // Guard against Supabase auth hash fragments — let onAuthStateChange handle them
   if (/^(access_token|error|error_code|type)=/.test(hash)) {
@@ -48,6 +50,7 @@ async function route() {
       if (session) {
         state.setToken(session.access_token);
         state.setUser(supabaseUserToAppUser(session.user));
+        log('AUTH', `session restored (${session.user.email ?? session.user.id})`);
       } else {
         navigate('login');
         return;
@@ -143,6 +146,13 @@ export function initRouter() {
     if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && session) {
       state.setToken(session.access_token);
       state.setUser(supabaseUserToAppUser(session.user));
+      if (event === 'SIGNED_IN') {
+        log('AUTH', `signed in (${session.user.email ?? session.user.id})`);
+      } else if (event === 'TOKEN_REFRESHED') {
+        log('AUTH', 'token refreshed');
+      } else if (event === 'INITIAL_SESSION') {
+        log('AUTH', `initial session (${session.user.email ?? session.user.id})`);
+      }
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         const appUser = state.getUser()!;
         const current = (location.hash.replace('#', '') || 'login') as Route;
@@ -151,6 +161,7 @@ export function initRouter() {
         }
       }
     } else if (event === 'SIGNED_OUT') {
+      log('AUTH', 'signed out');
       state.setToken(null);
       state.setUser(null);
       state.setSettings(null);
