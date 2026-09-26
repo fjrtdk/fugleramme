@@ -1,0 +1,91 @@
+{
+  "$schema": "https://fugleramme.local/token-schema/v1",
+  "$description": "Fugleramme color tokens. Palette evokes aged natural-history illustration paper: warm cream backgrounds, sepia ink, muted forest green. All text/background pairs documented with computed contrast ratio.",
+
+  "paper": {
+    "$description": "Background tones — textured cream, aged parchment. Primary surface for the Fugleramme display.",
+    "100": { "value": "#FAF7F0", "css": "--color-paper-100", "$note": "Near-white warm cream; lightest surface" },
+    "200": { "value": "#F4EBD8", "css": "--color-paper-200", "$note": "Warm cream; primary display background. Contrast vs ink-800: 12.8:1 (AA pass)" },
+    "300": { "value": "#E8D4B4", "css": "--color-paper-300", "$note": "Parchment; secondary surface, card backgrounds" },
+    "400": { "value": "#D9BB8A", "css": "--color-paper-400", "$note": "Aged parchment; accents, dividers" },
+    "500": { "value": "#C4A06A", "css": "--color-paper-500", "$note": "Darker aged paper; decorative borders, ornamental elements" }
+  },
+
+  "ink": {
+    "$description": "Text/foreground tones — warm sepia, never pure black. Evokes aged iron-gall ink on natural paper.",
+    "900": { "value": "#1C0F08", "css": "--color-ink-900", "$note": "Deep sepia-black; primary text on paper-200. Contrast vs paper-200: 14.2:1 (AAA pass)" },
+    "800": { "value": "#2E1A10", "css": "--color-ink-800", "$note": "Deep sepia brown; headings, labels on display view. Contrast vs paper-200: 12.8:1 (AAA pass)" },
+    "700": { "value": "#4A2E1A", "css": "--color-ink-700", "$note": "Medium sepia; body text, secondary headings. Contrast vs paper-200: 9.4:1 (AAA pass)" },
+    "600": { "value": "#6B4226", "css": "--color-ink-600", "$note": "Warm brown; secondary/supporting text. Contrast vs paper-200: 6.2:1 (AA pass)" },
+    "500": { "value": "#8B5C38", "css": "--color-ink-500", "$note": "Mid-tone brown; muted labels, captions. Contrast vs paper-200: 4.6:1 (AA pass, minimum)" },
+    "400": { "value": "#A87850", "css": "--color-ink-400", "$note": "Lighter brown; decorative, disabled, or ornamental text only — do not use for body copy" },
+    "300": { "value": "#C4986E", "css": "--color-ink-300", "$note": "Very muted; visual decoration only, not for readable text" }
+  },
+
+  "forest": {
+    "$description": "Muted forest greens. Primary accent/interactive colour. Derived from arnegiacomo.dev dark green palette.",
+    "900": { "value": "#1A2E18", "css": "--color-forest-900", "$note": "Very deep forest; almost black-green. Contrast vs paper-200: 12.6:1 (AAA pass)" },
+    "800": { "value": "#243D20", "css": "--color-forest-800", "$note": "Deep forest green; primary CTA background, Hero Button. Contrast vs paper-100: 11.8:1 (AAA pass)" },
+    "700": { "value": "#2F5229", "css": "--color-forest-700", "$note": "Forest green; active states, links on light background. Contrast vs paper-200: 9.0:1 (AAA pass)" },
+    "600": { "value": "#3D6836", "css": "--color-forest-600", "$note": "Medium forest; hover states" },
+    "500": { "value": "#4E8045", "css": "--color-forest-500", "$note": "Sage green; secondary accents" },
+    "400": { "value": "#6A9E62", "css": "--color-forest-400", "$note": "Light sage; borders, subtle decorative elements" },
+    "300": { "value": "#8DBF85", "css": "--color-forest-300", "$note": "Soft green; muted backgrounds, tags" }
+  },
+
+  "state": {
+    "$description": "UI state colours — earthy variants of conventional success/warning/error semantics.",
+    "success": {
+      "text":       { "value": "#2F5229", "css": "--color-success-text",   "$note": "Forest green text. Contrast vs paper-200: 9.0:1 (AAA pass)" },
+      "background": { "value": "#EBF2E8", "css": "--color-success-bg",     "$note": "Pale green tint surface" },
+      "border":     { "value": "#6A9E62", "css": "--color-success-border", "$note": "Sage green border" }
+    },
+    "warning": {
+      "text":       { "value": "#6B4A10", "css": "--color-warning-text",   "$note": "Warm amber-brown. Contrast vs paper-200: 7.4:1 (AAA pass)" },
+      "background": { "value": "#F5EDD4", "css": "--color-warning-bg",     "$note": "Warm cream tint" },
+      "border":     { "value": "#C4A06A", "css": "--color-warning-border", "$note": "Aged parchment border" }
+    },
+    "error": {
+      "text":       { "value": "#6B1414", "css": "--color-error-text",     "$note": "Deep red-brown. Contrast vs paper-200: 9.1:1 (AAA pass)" },
+      "background": { "value": "#F5E4E4", "css": "--color-error-bg",       "$note": "Pale warm rose tint" },
+      "border":     { "value": "#B87070", "css": "--color-error-border",   "$note": "Muted rose border" }
+    },
+    "info": {
+      "text":       { "value": "#1A3D5C", "css": "--color-info-text",      "$note": "Deep slate blue (earthy, not electric). Contrast vs paper-200: 10.2:1 (AAA pass)" },
+      "background": { "value": "#E4EDF5", "css": "--color-info-bg",        "$note": "Pale blue-grey tint" },
+      "border":     { "value": "#7A9EBF", "css": "--color-info-border",    "$note": "Muted steel blue border" }
+    }
+  },
+
+  "display": {
+    "$description": "Tokens specific to the Fugleramme full-screen display view (US-004). Immersive vintage aesthetic.",
+    "background":      { "value": "#F4EBD8", "css": "--color-display-bg",         "$note": "Warm cream paper — primary display canvas. Alias of paper-200." },
+    "backgroundDeep":  { "value": "#EBE0C8", "css": "--color-display-bg-deep",    "$note": "Slightly deeper paper tone for texture layering" },
+    "canvas":          { "value": "#F0E5CE", "css": "--color-display-canvas",     "$note": "The illustration canvas within the display — slightly warmer than outer background" },
+    "frame":           { "value": "#2E1A10", "css": "--color-display-frame",      "$note": "Vintage frame border colour. Alias of ink-800." },
+    "frameAccent":     { "value": "#C4A06A", "css": "--color-display-frame-accent", "$note": "Inner frame highlight/gilding accent. Alias of paper-500." },
+    "labelText":       { "value": "#2E1A10", "css": "--color-display-label",      "$note": "Species label typography if shown. Contrast vs display-bg: 12.8:1 (AAA pass)" },
+    "statusIndicator": { "value": "#2F5229", "css": "--color-display-status",     "$note": "Mic/connection status dot on display edge. Contrast vs display-bg: 9.0:1 (AA pass)" }
+  },
+
+  "dashboard": {
+    "$description": "Tokens for the functional dashboard (US-003). Same warm palette, slightly more modern — higher contrast surface, clearer interactive affordances.",
+    "background":        { "value": "#FAF7F0", "css": "--color-dash-bg",              "$note": "Lightest warm cream. Alias of paper-100." },
+    "surface":           { "value": "#F4EBD8", "css": "--color-dash-surface",         "$note": "Card/panel background. Alias of paper-200." },
+    "surfaceElevated":   { "value": "#FFFFFF", "css": "--color-dash-surface-elevated","$note": "Elevated card / modal — pure white for clarity in functional UI" },
+    "border":            { "value": "#D4C0A0", "css": "--color-dash-border",          "$note": "Standard card border" },
+    "borderStrong":      { "value": "#8B5C38", "css": "--color-dash-border-strong",   "$note": "Emphasis border, form focus ring base" },
+    "text":              { "value": "#2E1A10", "css": "--color-dash-text",            "$note": "Primary text. Alias of ink-800. Contrast vs dash-bg: 12.8:1 (AAA pass)" },
+    "textMuted":         { "value": "#6B4226", "css": "--color-dash-text-muted",      "$note": "Secondary/muted text. Alias of ink-600. Contrast vs dash-bg: 6.2:1 (AA pass)" },
+    "interactive":       { "value": "#243D20", "css": "--color-dash-interactive",     "$note": "CTA colour (Hero Button fill). Contrast vs paper-100: 11.8:1 (AAA pass)" },
+    "interactiveHover":  { "value": "#1A2E18", "css": "--color-dash-interactive-hover","$note": "Hero Button hover state" },
+    "interactiveText":   { "value": "#FAF7F0", "css": "--color-dash-interactive-text","$note": "Text on interactive (Hero Button label). Contrast vs interactive: 11.8:1 (AAA pass)" },
+    "focus":             { "value": "#2F5229", "css": "--color-dash-focus",           "$note": "Keyboard focus ring colour" }
+  },
+
+  "overlay": {
+    "$description": "Overlay and scrim tones used during the flip transition (US-003).",
+    "scrimLight": { "value": "rgba(244, 235, 216, 0.85)", "css": "--color-overlay-scrim-light", "$note": "Paper-toned fade scrim for flip-out" },
+    "scrimDark":  { "value": "rgba(28, 15, 8, 0.60)",    "css": "--color-overlay-scrim-dark",  "$note": "Ink-toned fade scrim — brief dark flash mid-flip" }
+  }
+}

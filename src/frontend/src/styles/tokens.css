@@ -1,0 +1,198 @@
+:root {
+  /* ── Colors: Paper ── */
+  --color-paper-100: #FAF7F0;
+  --color-paper-200: #F4EBD8;
+  --color-paper-300: #E8D4B4;
+  --color-paper-400: #D9BB8A;
+  --color-paper-500: #C4A06A;
+
+  /* ── Colors: Ink ── */
+  --color-ink-900: #1C0F08;
+  --color-ink-800: #2E1A10;
+  --color-ink-700: #4A2E1A;
+  --color-ink-600: #6B4226;
+  --color-ink-500: #8B5C38;
+  --color-ink-400: #A87850;
+  --color-ink-300: #C4986E;
+
+  /* ── Colors: Forest ── */
+  --color-forest-900: #1A2E18;
+  --color-forest-800: #243D20;
+  --color-forest-700: #2F5229;
+  --color-forest-600: #3D6836;
+  --color-forest-500: #4E8045;
+  --color-forest-400: #6A9E62;
+  --color-forest-300: #8DBF85;
+
+  /* ── Colors: Semantic ── */
+  --color-success-text: #2F5229;
+  --color-success-bg: #EBF2E8;
+  --color-success-border: #6A9E62;
+  --color-warning-text: #6B4A10;
+  --color-warning-bg: #F5EDD4;
+  --color-warning-border: #C4A06A;
+  --color-error-text: #6B1414;
+  --color-error-bg: #F5E4E4;
+  --color-error-border: #B87070;
+  --color-info-text: #1A3D5C;
+  --color-info-bg: #E4EDF5;
+  --color-info-border: #7A9EBF;
+
+  /* ── Colors: Display ── */
+  --color-display-bg: #F4EBD8;
+  --color-display-bg-deep: #EBE0C8;
+  --color-display-canvas: #F0E5CE;
+  --color-display-frame: #2E1A10;
+  --color-display-frame-accent: #C4A06A;
+  --color-display-label: #2E1A10;
+  --color-display-status: #2F5229;
+
+  /* ── Colors: Dashboard ── */
+  --color-dash-bg: #FAF7F0;
+  --color-dash-surface: #F4EBD8;
+  --color-dash-surface-elevated: #FFFFFF;
+  --color-dash-border: #D4C0A0;
+  --color-dash-border-strong: #8B5C38;
+  --color-dash-text: #2E1A10;
+  --color-dash-text-muted: #6B4226;
+  --color-dash-interactive: #243D20;
+  --color-dash-interactive-hover: #1A2E18;
+  --color-dash-interactive-text: #FAF7F0;
+  --color-dash-focus: #2F5229;
+
+  /* ── Colors: Overlay ── */
+  --color-overlay-scrim-light: rgba(244, 235, 216, 0.85);
+  --color-overlay-scrim-dark: rgba(28, 15, 8, 0.60);
+
+  /* ── Typography: Font Families ── */
+  --font-family-display: "Georgia", "Palatino Linotype", "Palatino", "Book Antiqua", "Times New Roman", serif;
+  --font-family-dashboard: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* ── Typography: Font Sizes ── */
+  --font-size-caption: 0.6875rem;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-base: 1rem;
+  --font-size-md: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-size-3xl: 2.5rem;
+  --font-size-hero: 3.5rem;
+
+  /* ── Typography: Font Weights ── */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ── Typography: Line Heights ── */
+  --line-height-tight: 1.1;
+  --line-height-snug: 1.3;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+
+  /* ── Typography: Letter Spacing ── */
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0em;
+  --letter-spacing-wide: 0.04em;
+  --letter-spacing-wider: 0.08em;
+  --letter-spacing-widest: 0.15em;
+
+  /* ── Spacing ── */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* ── Spacing: Layout ── */
+  --page-margin-mobile: 1rem;
+  --page-margin-tablet: 2rem;
+  --page-margin-desktop: 4rem;
+  --card-padding-sm: 1rem;
+  --card-padding-md: 1.5rem;
+  --card-padding-lg: 2rem;
+  --card-gap: 1.5rem;
+  --frame-outer-padding: 1.5rem;
+  --frame-border-gap: 0.5rem;
+  --frame-inner-padding: 2rem;
+
+  /* ── Spacing: Touch Targets ── */
+  --touch-target-min: 2.75rem;
+  --hero-button-min-height: 3.5rem;
+  --hero-button-min-width: 12rem;
+  --hero-button-padding-x: 2rem;
+  --hero-button-padding-y: 1rem;
+
+  /* ── Borders & Radius ── */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-full: 9999px;
+  --border-hairline: 1px;
+  --border-thin: 1px;
+  --border-medium: 2px;
+  --border-thick: 3px;
+  --border-frame: 6px;
+  --border-frame-outer: 12px;
+
+  /* ── Shadows ── */
+  --shadow-xs: 0 1px 2px 0 rgba(44, 26, 16, 0.12);
+  --shadow-sm: 0 2px 4px -1px rgba(44, 26, 16, 0.14), 0 1px 2px -1px rgba(44, 26, 16, 0.08);
+  --shadow-md: 0 4px 8px -2px rgba(44, 26, 16, 0.16), 0 2px 4px -2px rgba(44, 26, 16, 0.10);
+  --shadow-lg: 0 8px 16px -4px rgba(44, 26, 16, 0.18), 0 4px 8px -4px rgba(44, 26, 16, 0.12);
+  --shadow-frame: inset 0 0 0 1px rgba(44, 26, 16, 0.06), 0 12px 32px -6px rgba(44, 26, 16, 0.30), 0 4px 12px -2px rgba(44, 26, 16, 0.18);
+  --shadow-hero-button: 0 4px 12px -2px rgba(36, 61, 32, 0.40), 0 2px 4px -1px rgba(36, 61, 32, 0.24);
+  --shadow-hero-button-hover: 0 6px 16px -3px rgba(36, 61, 32, 0.48), 0 3px 6px -1px rgba(36, 61, 32, 0.28);
+
+  /* ── Animation: Easing ── */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-organic: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* ── Animation: Flip ── */
+  --flip-out-duration: 500ms;
+  --flip-in-duration: 600ms;
+  --flip-in-delay: 400ms;
+  --flip-total-duration: 1000ms;
+  --flip-reverse-out-duration: 400ms;
+  --flip-reverse-in-duration: 400ms;
+  --flip-reverse-in-delay: 300ms;
+
+  /* ── Animation: Detection ── */
+  --detection-entrance-duration: 800ms;
+  --detection-entrance-easing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --detection-exit-duration: 1000ms;
+  --detection-reposition-duration: 600ms;
+  --detection-stagger-increment: 120ms;
+
+  /* ── Animation: Empty State ── */
+  --empty-appear-duration: 1200ms;
+  --empty-appear-easing: var(--ease-out);
+
+  /* ── Animation: Interactions ── */
+  --triple-tap-ripple-duration: 400ms;
+  --triple-tap-ripple-easing: var(--ease-out);
+  --micro-button-hover: 100ms;
+  --micro-button-press: 80ms;
+  --micro-button-press-scale: 0.97;
+
+  /* ── Animation: Reduced Motion ── */
+  --reduced-flip-duration: 200ms;
+  --reduced-detection-entrance: 300ms;
+  --reduced-detection-exit: 300ms;
+}

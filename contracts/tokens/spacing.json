@@ -1,0 +1,154 @@
+{
+  "$schema": "https://fugleramme.local/token-schema/v1",
+  "$description": "Fugleramme spacing tokens. 8px base unit with a consistent geometric scale. All values are rem-based with px equivalents noted.",
+
+  "base": {
+    "unit": { "value": "8px", "$note": "The grid unit. All spacing is a multiple of 8 (or half-unit 4px for micro-adjustments)." },
+    "unitRem": { "value": "0.5rem", "$note": "Rem equivalent of the 8px unit at default 16px root" }
+  },
+
+  "space": {
+    "$description": "General-purpose spacing scale. Use these for padding, margin, gap.",
+    "0":    { "value": "0",       "css": "--space-0",    "$px": "0px",   "$note": "No spacing" },
+    "px":   { "value": "0.0625rem","css": "--space-px",  "$px": "1px",   "$note": "1px hairline gap; use for borders not padding" },
+    "0.5":  { "value": "0.125rem","css": "--space-0\\.5","$px": "2px",   "$note": "2px — micro-adjustment only" },
+    "1":    { "value": "0.25rem", "css": "--space-1",    "$px": "4px",   "$note": "Half-unit. Inline icon gaps, tight chip padding" },
+    "2":    { "value": "0.5rem",  "css": "--space-2",    "$px": "8px",   "$note": "1× unit (xs). Compact padding, icon-to-label gap" },
+    "3":    { "value": "0.75rem", "css": "--space-3",    "$px": "12px",  "$note": "1.5× unit. Button internal padding vertical" },
+    "4":    { "value": "1rem",    "css": "--space-4",    "$px": "16px",  "$note": "2× unit (sm). Standard inner padding, form element padding" },
+    "5":    { "value": "1.25rem", "css": "--space-5",    "$px": "20px",  "$note": "2.5× unit." },
+    "6":    { "value": "1.5rem",  "css": "--space-6",    "$px": "24px",  "$note": "3× unit (md). Card padding, section gap" },
+    "8":    { "value": "2rem",    "css": "--space-8",    "$px": "32px",  "$note": "4× unit (lg). Section spacing, card-to-card gap" },
+    "10":   { "value": "2.5rem",  "css": "--space-10",   "$px": "40px",  "$note": "5× unit." },
+    "12":   { "value": "3rem",    "css": "--space-12",   "$px": "48px",  "$note": "6× unit (xl). Dashboard section vertical rhythm" },
+    "16":   { "value": "4rem",    "css": "--space-16",   "$px": "64px",  "$note": "8× unit (2xl). Page-level vertical spacing" },
+    "20":   { "value": "5rem",    "css": "--space-20",   "$px": "80px",  "$note": "10× unit." },
+    "24":   { "value": "6rem",    "css": "--space-24",   "$px": "96px",  "$note": "12× unit (3xl). Wide spacing, hero vertical rhythm" },
+    "32":   { "value": "8rem",    "css": "--space-32",   "$px": "128px", "$note": "16× unit. Large structural gaps" },
+    "40":   { "value": "10rem",   "css": "--space-40",   "$px": "160px", "$note": "Maximum spacing token; hero section padding" }
+  },
+
+  "pageMargin": {
+    "$description": "Horizontal page margins at each responsive breakpoint. Applied to the page container.",
+    "mobile": {
+      "value": "1rem",
+      "css": "--page-margin-mobile",
+      "$px": "16px",
+      "$breakpoint": "0px – 767px",
+      "$note": "Minimum viable breathing room on narrow phones (320px+)"
+    },
+    "tablet": {
+      "value": "2rem",
+      "css": "--page-margin-tablet",
+      "$px": "32px",
+      "$breakpoint": "768px – 1023px",
+      "$note": "Comfortable tablet margin"
+    },
+    "desktop": {
+      "value": "4rem",
+      "css": "--page-margin-desktop",
+      "$px": "64px",
+      "$breakpoint": "1024px – 1439px",
+      "$note": "Standard desktop margin"
+    },
+    "wide": {
+      "value": "6rem",
+      "css": "--page-margin-wide",
+      "$px": "96px",
+      "$breakpoint": "1440px+",
+      "$note": "Wide/large desktop margin"
+    }
+  },
+
+  "card": {
+    "$description": "Padding inside card and panel components.",
+    "paddingSm": {
+      "value": "1rem",
+      "css": "--card-padding-sm",
+      "$px": "16px",
+      "$note": "Compact card (mobile, tight info cards)"
+    },
+    "paddingMd": {
+      "value": "1.5rem",
+      "css": "--card-padding-md",
+      "$px": "24px",
+      "$note": "Standard card padding (dashboard panels)"
+    },
+    "paddingLg": {
+      "value": "2rem",
+      "css": "--card-padding-lg",
+      "$px": "32px",
+      "$note": "Generous card padding (hero card, onboarding steps)"
+    },
+    "gap": {
+      "value": "1.5rem",
+      "css": "--card-gap",
+      "$px": "24px",
+      "$note": "Gap between cards in a grid layout"
+    }
+  },
+
+  "frame": {
+    "$description": "Spacing within and around the vintage display frame (display view, US-004).",
+    "outerPadding": {
+      "value": "1.5rem",
+      "css": "--frame-outer-padding",
+      "$px": "24px",
+      "$note": "Space between viewport edge and outer frame border"
+    },
+    "borderGap": {
+      "value": "0.5rem",
+      "css": "--frame-border-gap",
+      "$px": "8px",
+      "$note": "Gap between outer and inner decorative frame lines"
+    },
+    "innerPadding": {
+      "value": "2rem",
+      "css": "--frame-inner-padding",
+      "$px": "32px",
+      "$note": "Space between inner frame border and the illustration canvas"
+    }
+  },
+
+  "touchTarget": {
+    "$description": "Minimum touch target dimensions. WCAG 2.1 AA requires 44×44px minimum.",
+    "minSize": {
+      "value": "2.75rem",
+      "css": "--touch-target-min",
+      "$px": "44px",
+      "$note": "Minimum touch/click target size (WCAG 2.1 AA 2.5.5). Hero Button must exceed this."
+    },
+    "heroButton": {
+      "minHeight": {
+        "value": "3.5rem",
+        "css": "--hero-button-min-height",
+        "$px": "56px",
+        "$note": "Hero Button minimum height (US-003 AC 12)"
+      },
+      "minWidth": {
+        "value": "12rem",
+        "css": "--hero-button-min-width",
+        "$px": "192px",
+        "$note": "Hero Button minimum width for legible label at 320px viewport"
+      },
+      "paddingX": {
+        "value": "2rem",
+        "css": "--hero-button-padding-x",
+        "$px": "32px"
+      },
+      "paddingY": {
+        "value": "1rem",
+        "css": "--hero-button-padding-y",
+        "$px": "16px"
+      }
+    }
+  },
+
+  "breakpoints": {
+    "$description": "Responsive breakpoints referenced throughout the token system.",
+    "mobile":  { "value": "320px",  "css": "--bp-mobile",  "$note": "Minimum supported viewport width" },
+    "tablet":  { "value": "768px",  "css": "--bp-tablet" },
+    "desktop": { "value": "1024px", "css": "--bp-desktop" },
+    "wide":    { "value": "1440px", "css": "--bp-wide" }
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "$schema": "https://fugleramme.local/token-schema/v1",
+  "$description": "Fugleramme border, radius, and shadow tokens. Vintage aesthetic is angular — minimal rounding. Shadows are warm-toned (sepia-brown tints, never cool grey).",
+
+  "radius": {
+    "$description": "Border radii. The display view is angular/vintage; the dashboard may use very slight rounding for modern affordance.",
+    "none": {
+      "value": "0px",
+      "css": "--radius-none",
+      "$note": "Strictly square corners. Use on all display-view frames, vintage illustration borders, and the Hero Button."
+    },
+    "xs": {
+      "value": "2px",
+      "css": "--radius-xs",
+      "$note": "Barely perceptible rounding. Use on dashboard input fields and small chips where hard edges feel too stark."
+    },
+    "sm": {
+      "value": "4px",
+      "css": "--radius-sm",
+      "$note": "Subtle rounding. Use on dashboard cards and panels only."
+    },
+    "md": {
+      "value": "6px",
+      "css": "--radius-md",
+      "$note": "Moderate rounding. Reserved for modals and overlays in the dashboard where softness aids focus."
+    },
+    "full": {
+      "value": "9999px",
+      "css": "--radius-full",
+      "$note": "Pill/circle. Use only for status indicator dots and avatar thumbnails."
+    }
+  },
+
+  "borderWidth": {
+    "hairline": { "value": "1px",  "css": "--border-hairline", "$note": "Dividers, subtle card outlines" },
+    "thin":     { "value": "1px",  "css": "--border-thin",     "$note": "Standard input border, card border" },
+    "medium":   { "value": "2px",  "css": "--border-medium",   "$note": "Emphasis borders, active states, focus rings" },
+    "thick":    { "value": "3px",  "css": "--border-thick",    "$note": "Strong accent borders" },
+    "frame":    { "value": "6px",  "css": "--border-frame",    "$note": "Vintage inner frame line" },
+    "frameOuter": { "value": "12px", "css": "--border-frame-outer", "$note": "Vintage outer frame line" }
+  },
+
+  "borderStyle": {
+    "solid":  { "value": "solid",  "css": "--border-style-solid" },
+    "dashed": { "value": "dashed", "css": "--border-style-dashed", "$note": "Provisional/empty-state dashes; rare" },
+    "double": { "value": "double", "css": "--border-style-double", "$note": "CSS double border — used on vintage frame outer edge" }
+  },
+
+  "vintage": {
+    "$description": "Composed border definitions for the Fugleramme display frame (US-004). These produce the hand-cut illustration aesthetic.",
+    "frameOuter": {
+      "border": "12px double var(--color-ink-800)",
+      "css": "--vintage-frame-outer",
+      "$note": "Outermost double-line frame. CSS 'double' renders as two lines with a gap between — classic vintage look."
+    },
+    "frameInner": {
+      "border": "2px solid var(--color-paper-500)",
+      "css": "--vintage-frame-inner",
+      "$note": "Inner accent line. Uses paper-500 (warm aged gold) for a subtle gilded-line effect between outer and canvas."
+    },
+    "frameCornerInset": {
+      "value": "6px",
+      "css": "--vintage-frame-corner-inset",
+      "$note": "Additional inset to create the gap between the double outer border and the inner accent line."
+    },
+    "illustrationBorder": {
+      "border": "1px solid var(--color-ink-400)",
+      "css": "--vintage-illustration-border",
+      "$note": "Subtle hairline around each cut-out bird illustration. Mimics the hand-cut paper edge."
+    }
+  },
+
+  "dashboard": {
+    "$description": "Border definitions for the functional dashboard (US-003).",
+    "cardBorder": {
+      "value": "1px solid var(--color-dash-border)",
+      "css": "--dash-card-border",
+      "$note": "Standard dashboard card outline"
+    },
+    "inputBorder": {
+      "value": "1px solid var(--color-dash-border)",
+      "css": "--dash-input-border",
+      "$note": "Form input border at rest"
+    },
+    "inputBorderFocus": {
+      "value": "2px solid var(--color-dash-focus)",
+      "css": "--dash-input-border-focus",
+      "$note": "Focus state — wider, forest green. Visible keyboard focus indicator."
+    },
+    "divider": {
+      "value": "1px solid var(--color-paper-400)",
+      "css": "--dash-divider",
+      "$note": "Horizontal rule / section divider"
+    },
+    "heroBorder": {
+      "value": "0px none transparent",
+      "css": "--hero-button-border",
+      "$note": "Hero Button has no border — relies on background colour contrast only (no border needed at 11.8:1)"
+    }
+  },
+
+  "shadow": {
+    "$description": "Box shadows. All shadows use warm sepia tones, never neutral grey. Values are CSS box-shadow strings.",
+    "none": {
+      "value": "none",
+      "css": "--shadow-none"
+    },
+    "xs": {
+      "value": "0 1px 2px 0 rgba(44, 26, 16, 0.12)",
+      "css": "--shadow-xs",
+      "$note": "Hairline lift — subtle card depth. Warm sepia tint."
+    },
+    "sm": {
+      "value": "0 2px 4px -1px rgba(44, 26, 16, 0.14), 0 1px 2px -1px rgba(44, 26, 16, 0.08)",
+      "css": "--shadow-sm",
+      "$note": "Small shadow — dashboard cards, buttons"
+    },
+    "md": {
+      "value": "0 4px 8px -2px rgba(44, 26, 16, 0.16), 0 2px 4px -2px rgba(44, 26, 16, 0.10)",
+      "css": "--shadow-md",
+      "$note": "Medium shadow — elevated cards, Hero Button"
+    },
+    "lg": {
+      "value": "0 8px 16px -4px rgba(44, 26, 16, 0.18), 0 4px 8px -4px rgba(44, 26, 16, 0.12)",
+      "css": "--shadow-lg",
+      "$note": "Large shadow — modals, drawer panels"
+    },
+    "xl": {
+      "value": "0 16px 32px -8px rgba(44, 26, 16, 0.20), 0 8px 16px -8px rgba(44, 26, 16, 0.14)",
+      "css": "--shadow-xl",
+      "$note": "Extra-large — page-level overlay, fullscreen panels"
+    },
+    "frame": {
+      "value": "inset 0 0 0 1px rgba(44, 26, 16, 0.06), 0 12px 32px -6px rgba(44, 26, 16, 0.30), 0 4px 12px -2px rgba(44, 26, 16, 0.18)",
+      "css": "--shadow-frame",
+      "$note": "Vintage display frame shadow. Combines a subtle inner inset with a rich outer drop shadow to create depth and authenticity."
+    },
+    "heroButton": {
+      "value": "0 4px 12px -2px rgba(36, 61, 32, 0.40), 0 2px 4px -1px rgba(36, 61, 32, 0.24)",
+      "css": "--shadow-hero-button",
+      "$note": "Hero Button shadow — forest green tint to echo the button fill colour."
+    },
+    "heroButtonHover": {
+      "value": "0 6px 16px -3px rgba(36, 61, 32, 0.48), 0 3px 6px -1px rgba(36, 61, 32, 0.28)",
+      "css": "--shadow-hero-button-hover",
+      "$note": "Hero Button lifted hover shadow"
+    },
+    "insetPressed": {
+      "value": "inset 0 2px 4px 0 rgba(44, 26, 16, 0.20)",
+      "css": "--shadow-inset-pressed",
+      "$note": "Active/pressed state — element appears depressed into surface"
+    },
+    "illustrationFloat": {
+      "value": "2px 4px 8px -2px rgba(44, 26, 16, 0.22)",
+      "css": "--shadow-illustration-float",
+      "$note": "Subtle cast shadow beneath each bird illustration on the display canvas. Mimics cut paper floating on the page."
+    }
+  },
+
+  "focusRing": {
+    "$description": "Focus visible outlines for keyboard accessibility. Ensure all interactive elements apply these.",
+    "default": {
+      "outline": "2px solid var(--color-dash-focus)",
+      "outlineOffset": "2px",
+      "css": "--focus-ring-default",
+      "$note": "Forest green focus ring. Must be applied on :focus-visible on ALL interactive elements."
+    },
+    "onDark": {
+      "outline": "2px solid var(--color-paper-100)",
+      "outlineOffset": "2px",
+      "css": "--focus-ring-on-dark",
+      "$note": "Light focus ring for use on dark green surfaces (Hero Button)"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#F4EBD8"/>
+  <g fill="#243D20">
+    <ellipse cx="256" cy="280" rx="85" ry="58"/>
+    <circle cx="320" cy="218" r="42"/>
+    <path d="M171 293 Q120 345 101 385 Q138 345 171 332 Z"/>
+    <path d="M354 213 L394 208 L354 229 Z"/>
+    <path d="M213 266 Q256 234 306 253" stroke="#1A2E18" stroke-width="5" fill="none"/>
+    <circle cx="327" cy="210" r="8" fill="#F4EBD8"/>
+    <circle cx="327" cy="210" r="4" fill="#1C0F08"/>
+  </g>
+</svg>

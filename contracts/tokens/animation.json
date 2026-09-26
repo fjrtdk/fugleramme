@@ -1,0 +1,111 @@
+{
+  "$schema": "https://fugleramme.local/token-schema/v1",
+  "$description": "Fugleramme animation tokens. Defines timing for the dashboard/display flip (US-003), bird detection entrance/exit (US-004), and micro-interactions. Values are CSS-consumable strings unless noted.",
+
+  "duration": {
+    "$description": "Named durations. All values in milliseconds (ms) and seconds (s) for CSS.",
+    "instant":   { "ms": 0,    "css-value": "0ms",    "$note": "No animation; immediate state change" },
+    "fast":      { "ms": 100,  "css-value": "100ms",  "$note": "Micro-interactions: hover colour, focus ring" },
+    "quick":     { "ms": 150,  "css-value": "150ms",  "$note": "Button state changes, badge updates" },
+    "normal":    { "ms": 200,  "css-value": "200ms",  "$note": "Standard UI transitions: panel expand, tooltip" },
+    "moderate":  { "ms": 350,  "css-value": "350ms",  "$note": "Card enter/exit, overlay open" },
+    "slow":      { "ms": 500,  "css-value": "500ms",  "$note": "Hero Button → flip initiation fade-out" },
+    "deliberate":{ "ms": 600,  "css-value": "600ms",  "$note": "Core flip transition duration (US-003)" },
+    "patient":   { "ms": 800,  "css-value": "800ms",  "$note": "Bird illustration entrance fade-in (US-004)" },
+    "gradual":   { "ms": 1000, "css-value": "1000ms", "$note": "Bird illustration exit fade-out (US-004)" },
+    "unhurried": { "ms": 1200, "css-value": "1200ms", "$note": "Extended ornamental transitions; use sparingly" }
+  },
+
+  "easing": {
+    "$description": "Named CSS timing functions. Choose based on physical feel of the motion.",
+    "linear":         { "value": "linear",                            "css": "--ease-linear",         "$note": "Constant rate; for opacity-only cross-fades" },
+    "easeIn":         { "value": "cubic-bezier(0.4, 0, 1, 1)",       "css": "--ease-in",             "$note": "Starts slow, accelerates — element leaving the screen" },
+    "easeOut":        { "value": "cubic-bezier(0, 0, 0.2, 1)",       "css": "--ease-out",            "$note": "Starts fast, decelerates — element entering the screen" },
+    "easeInOut":      { "value": "cubic-bezier(0.4, 0, 0.2, 1)",     "css": "--ease-in-out",         "$note": "Symmetrical — general-purpose smooth transition" },
+    "spring":         { "value": "cubic-bezier(0.175, 0.885, 0.32, 1.275)", "css": "--ease-spring",  "$note": "Slight overshoot/bounce — bird illustration landing, Hero Button press release" },
+    "snap":           { "value": "cubic-bezier(0.2, 0, 0, 1)",       "css": "--ease-snap",           "$note": "Fast start, firm deceleration — flip transition arrival" },
+    "organic":        { "value": "cubic-bezier(0.25, 0.46, 0.45, 0.94)", "css": "--ease-organic",    "$note": "Natural, slightly asymmetric — illustration fade-in, evokes living motion" }
+  },
+
+  "flip": {
+    "$description": "Dashboard ↔ Fugleramme display flip transition (US-003). The display is an immersive overlay; the flip must feel weighty and deliberate.",
+    "outDuration":    { "value": "500ms",   "css": "--flip-out-duration",   "$note": "Duration for dashboard to fade/scale out" },
+    "outEasing":      { "value": "cubic-bezier(0.4, 0, 1, 1)", "css": "--flip-out-easing", "$note": "Ease-in — dashboard exits with acceleration" },
+    "inDuration":     { "value": "600ms",   "css": "--flip-in-duration",    "$note": "Duration for display to fade/scale in" },
+    "inEasing":       { "value": "cubic-bezier(0, 0, 0.2, 1)", "css": "--flip-in-easing",  "$note": "Ease-out — display arrives decelerating into place" },
+    "inDelay":        { "value": "400ms",   "css": "--flip-in-delay",       "$note": "Display starts fading in after dashboard is mostly hidden (400ms into out animation)" },
+    "totalDuration":  { "value": "1000ms",  "css": "--flip-total-duration", "$note": "Total perceptible duration of the flip gesture (out + overlap + in)" },
+    "scrimPeak":      { "value": "500ms",   "css": "--flip-scrim-peak",     "$note": "Midpoint at which the scrim overlay is at full opacity" },
+    "scrimEasing":    { "value": "linear",  "css": "--flip-scrim-easing",   "$note": "Linear scrim — smooth ink-dip feel" },
+    "reverseOutDuration": { "value": "400ms", "css": "--flip-reverse-out-duration", "$note": "Display → dashboard (triple-tap return). Faster than initial flip — feels responsive." },
+    "reverseInDuration":  { "value": "400ms", "css": "--flip-reverse-in-duration" },
+    "reverseInDelay":     { "value": "300ms", "css": "--flip-reverse-in-delay" }
+  },
+
+  "detection": {
+    "$description": "New bird detection entering and leaving the display canvas (US-004 AC 6 and 9).",
+    "entranceDuration": {
+      "value": "800ms",
+      "css": "--detection-entrance-duration",
+      "$note": "How long a new bird illustration takes to fully appear. Ease-out fade from opacity 0 → 1, slight scale 0.92 → 1."
+    },
+    "entranceEasing":   { "value": "cubic-bezier(0.25, 0.46, 0.45, 0.94)", "css": "--detection-entrance-easing", "$note": "Organic ease-out — bird illustration settles onto the page" },
+    "entranceScaleFrom": { "value": "0.92", "css": "--detection-entrance-scale-from", "$note": "Starting scale for entrance. Subtle — not a dramatic zoom, just a gentle materialise." },
+    "entranceOpacityFrom": { "value": "0",  "css": "--detection-entrance-opacity-from" },
+    "exitDuration":     {
+      "value": "1000ms",
+      "css": "--detection-exit-duration",
+      "$note": "Bird fades out after configurable linger duration (default 60s per US-004 AC 9). Slower than entrance — a gentle departure."
+    },
+    "exitEasing":       { "value": "cubic-bezier(0.4, 0, 1, 1)", "css": "--detection-exit-easing", "$note": "Ease-in — fade accelerates toward end; the bird dissolves away" },
+    "exitOpacityTo":    { "value": "0", "css": "--detection-exit-opacity-to" },
+    "repositionDuration": {
+      "value": "600ms",
+      "css": "--detection-reposition-duration",
+      "$note": "When a new detection causes other illustrations to reflow/reposition on the canvas. Use CSS transition on transform."
+    },
+    "repositionEasing": { "value": "cubic-bezier(0.4, 0, 0.2, 1)", "css": "--detection-reposition-easing" },
+    "staggerIncrement": {
+      "value": "120ms",
+      "css": "--detection-stagger-increment",
+      "$note": "Stagger delay per additional illustration when multiple birds arrive simultaneously (e.g. on initial load). Multiply by index."
+    }
+  },
+
+  "emptyState": {
+    "$description": "Display empty-state perch/branch illustration (US-004 AC 7). No text — illustration only.",
+    "appearDuration": { "value": "1200ms", "css": "--empty-appear-duration", "$note": "Unhurried fade-in of the bare perch illustration on initial load or when all birds clear" },
+    "appearEasing":   { "value": "linear", "css": "--empty-appear-easing" },
+    "disappearDuration": { "value": "600ms", "css": "--empty-disappear-duration", "$note": "Perch fades out before first bird appears" }
+  },
+
+  "microInteraction": {
+    "$description": "Small, immediate feedback animations. Keep these snappy — do not let them feel laggy.",
+    "buttonHoverDuration":    { "value": "100ms", "css": "--micro-button-hover",    "$note": "Background colour shift on hover — fast, not jarring" },
+    "buttonPressDuration":    { "value": "80ms",  "css": "--micro-button-press",    "$note": "Scale-down on active/press (scale 1 → 0.97)" },
+    "buttonPressScale":       { "value": "0.97",  "css": "--micro-button-press-scale" },
+    "buttonReleaseEasing":    { "value": "cubic-bezier(0.175, 0.885, 0.32, 1.275)", "css": "--micro-button-release-easing", "$note": "Spring ease-out on release — Hero Button bounces back with confidence" },
+    "focusRingDuration":      { "value": "100ms", "css": "--micro-focus-ring",      "$note": "Focus ring fade-in — must be immediate to feel responsive to keyboard navigation" },
+    "linkHoverDuration":      { "value": "150ms", "css": "--micro-link-hover" },
+    "toastEnterDuration":     { "value": "300ms", "css": "--micro-toast-enter",     "$note": "Status toast slide+fade in from bottom" },
+    "toastExitDuration":      { "value": "200ms", "css": "--micro-toast-exit" }
+  },
+
+  "tripleTap": {
+    "$description": "Feedback timing for the triple-tap return gesture (US-003 AC 6–9). Visual feedback must confirm each tap without prematurely revealing the dashboard.",
+    "windowMs":          { "ms": 1500, "css": "--triple-tap-window", "$note": "Three taps must occur within 1500ms (US-003 AC 6)" },
+    "rippleDuration":    { "value": "400ms", "css": "--triple-tap-ripple-duration", "$note": "Each tap spawns a brief radial ripple on the display canvas to confirm the tap was registered" },
+    "rippleEasing":      { "value": "cubic-bezier(0, 0, 0.2, 1)", "css": "--triple-tap-ripple-easing" },
+    "rippleOpacityFrom": { "value": "0.3",   "css": "--triple-tap-ripple-opacity" },
+    "resetFeedback":     { "value": "200ms", "css": "--triple-tap-reset-feedback", "$note": "Brief visual flash if counter resets (timeout) — subtle, does not break immersion" }
+  },
+
+  "reducedMotion": {
+    "$description": "Fallback durations when prefers-reduced-motion: reduce is active. Preserve opacity transitions but collapse transform/scale animations.",
+    "flipDuration":        { "value": "200ms", "css": "--reduced-flip-duration",        "$note": "Quick cross-fade instead of scale-and-fly" },
+    "detectionEntrance":   { "value": "300ms", "css": "--reduced-detection-entrance" },
+    "detectionExit":       { "value": "300ms", "css": "--reduced-detection-exit" },
+    "microInteraction":    { "value": "0ms",   "css": "--reduced-micro",               "$note": "No hover animation; state changes are instant" },
+    "$implementationNote": "Web must honour @media (prefers-reduced-motion: reduce) by swapping to these tokens. Remove all transform transitions; keep opacity only."
+  }
+}

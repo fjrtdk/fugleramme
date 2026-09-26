@@ -1,0 +1,40 @@
+NOTICE — Fugleramme
+====================
+
+Fugleramme is a non-commercial personal project for local bird species
+identification and display. It is not intended for commercial use.
+
+
+BirdNET Model and Labels
+========================
+Files: assets/model/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite
+       assets/model/BirdNET_GLOBAL_6K_V2.4_Labels.txt
+
+Source: BirdNET-Analyzer, https://github.com/kahst/BirdNET-Analyzer
+Authors: Stefan Kahl, Connor Wood, Maximilian Eibl, Holger Klinck
+Licence: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+         https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+These files are used unmodified for local, non-commercial bird species
+identification. Fugleramme is a non-commercial personal project.
+No model weights have been altered. Any redistribution of these files
+must be under the same CC BY-NC-SA 4.0 licence.
+
+Recommended citation:
+  Kahl, S., Wood, C. M., Eibl, M., & Klinck, H. (2021).
+  BirdNET: A deep learning solution for avian diversity monitoring.
+  Ecological Informatics, 61, 101236.
+  https://doi.org/10.1016/j.ecoinf.2021.101236
+
+
+Bird Illustrations
+==================
+Directory: assets/artwork/
+
+Sources: Biodiversity Heritage Library (BHL), https://www.biodiversitylibrary.org
+         Original digital collection by Arne Giacomo
+Licence: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+         https://creativecommons.org/licenses/by-sa/4.0/
+
+Any modification or redistribution of these illustrations must be under
+the same CC BY-SA 4.0 licence. Attribution must be preserved.

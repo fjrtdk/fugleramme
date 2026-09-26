@@ -1,0 +1,164 @@
+{
+  "$schema": "https://fugleramme.local/token-schema/v1",
+  "$description": "Fugleramme typography tokens. Display view uses an elegant system serif stack (vintage feel); dashboard uses a clean system sans. No external font downloads — fully local, works offline.",
+
+  "fontFamily": {
+    "display": {
+      "value": "\"Georgia\", \"Palatino Linotype\", \"Palatino\", \"Book Antiqua\", \"Times New Roman\", serif",
+      "css": "--font-family-display",
+      "$note": "Primary stack for the Fugleramme display view. Georgia is the best widely-available serif for this aesthetic; Palatino is preferred on macOS/iOS where available."
+    },
+    "dashboard": {
+      "value": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", sans-serif",
+      "css": "--font-family-dashboard",
+      "$note": "System sans-serif for the functional dashboard UI. Uses the platform's native UI font."
+    },
+    "mono": {
+      "value": "\"SF Mono\", \"Consolas\", \"Monaco\", \"Cascadia Code\", \"Roboto Mono\", monospace",
+      "css": "--font-family-mono",
+      "$note": "Monospace for any status/debug output. Prefer avoiding in display view."
+    }
+  },
+
+  "fontSize": {
+    "$description": "Rem-based scale. Base is 16px browser default. Rem values provided; px equivalents noted.",
+    "caption": {
+      "value": "0.6875rem",
+      "css": "--font-size-caption",
+      "$pxEquivalent": "11px",
+      "$note": "Smallest label text. Bird species captions on display (if shown later). Use sparingly."
+    },
+    "xs": {
+      "value": "0.75rem",
+      "css": "--font-size-xs",
+      "$pxEquivalent": "12px",
+      "$note": "Extra-small; status indicators, helper text"
+    },
+    "sm": {
+      "value": "0.8125rem",
+      "css": "--font-size-sm",
+      "$pxEquivalent": "13px",
+      "$note": "Small; secondary labels, badge text"
+    },
+    "base": {
+      "value": "1rem",
+      "css": "--font-size-base",
+      "$pxEquivalent": "16px",
+      "$note": "Body text baseline"
+    },
+    "md": {
+      "value": "1.125rem",
+      "css": "--font-size-md",
+      "$pxEquivalent": "18px",
+      "$note": "Slightly enlarged body; reading comfort on larger screens"
+    },
+    "lg": {
+      "value": "1.25rem",
+      "css": "--font-size-lg",
+      "$pxEquivalent": "20px",
+      "$note": "Sub-heading, card titles"
+    },
+    "xl": {
+      "value": "1.5rem",
+      "css": "--font-size-xl",
+      "$pxEquivalent": "24px",
+      "$note": "Section headings"
+    },
+    "2xl": {
+      "value": "2rem",
+      "css": "--font-size-2xl",
+      "$pxEquivalent": "32px",
+      "$note": "Page headings"
+    },
+    "3xl": {
+      "value": "2.5rem",
+      "css": "--font-size-3xl",
+      "$pxEquivalent": "40px",
+      "$note": "Large display headings"
+    },
+    "hero": {
+      "value": "3.5rem",
+      "css": "--font-size-hero",
+      "$pxEquivalent": "56px",
+      "$note": "Hero / display-title text. Used for the app name on the display view at largest breakpoint."
+    }
+  },
+
+  "fontWeight": {
+    "light":    { "value": "300", "css": "--font-weight-light",    "$note": "Decorative / light display text; use sparingly" },
+    "regular":  { "value": "400", "css": "--font-weight-regular",  "$note": "Default body weight" },
+    "medium":   { "value": "500", "css": "--font-weight-medium",   "$note": "Slightly emphasised text, nav labels" },
+    "semibold": { "value": "600", "css": "--font-weight-semibold", "$note": "Card titles, subheadings" },
+    "bold":     { "value": "700", "css": "--font-weight-bold",     "$note": "Strong emphasis, hero button label" }
+  },
+
+  "lineHeight": {
+    "tight":     { "value": "1.1",  "css": "--line-height-tight",     "$note": "Large display headings — tight prevents excessive space" },
+    "snug":      { "value": "1.3",  "css": "--line-height-snug",      "$note": "Card titles, short labels" },
+    "normal":    { "value": "1.5",  "css": "--line-height-normal",    "$note": "Body text — comfortable reading" },
+    "relaxed":   { "value": "1.625","css": "--line-height-relaxed",   "$note": "Dashboard prose, longer descriptions" },
+    "loose":     { "value": "2.0",  "css": "--line-height-loose",     "$note": "Widely-spaced decorative text; use with caption/label stacks" }
+  },
+
+  "letterSpacing": {
+    "tight":    { "value": "-0.02em", "css": "--letter-spacing-tight",    "$note": "Large serif headings — optical tightening" },
+    "normal":   { "value": "0em",     "css": "--letter-spacing-normal",   "$note": "Default; body copy" },
+    "wide":     { "value": "0.04em",  "css": "--letter-spacing-wide",     "$note": "All-caps labels, status badges" },
+    "wider":    { "value": "0.08em",  "css": "--letter-spacing-wider",    "$note": "Vintage-style spaced-out small caps labels" },
+    "widest":   { "value": "0.15em",  "css": "--letter-spacing-widest",   "$note": "Ornamental / chapter-mark style text" }
+  },
+
+  "textTransform": {
+    "label":  { "value": "uppercase",  "css": "--text-transform-label",  "$note": "Apply to caption/xs text for a vintage engraving look" },
+    "body":   { "value": "none",       "css": "--text-transform-body",   "$note": "Default — no transform on body copy" }
+  },
+
+  "compositions": {
+    "$description": "Named text style presets. Not CSS — use as a recipe for applying multiple tokens together.",
+    "displayTitle": {
+      "fontFamily": "var(--font-family-display)",
+      "fontSize": "var(--font-size-hero)",
+      "fontWeight": "var(--font-weight-light)",
+      "lineHeight": "var(--line-height-tight)",
+      "letterSpacing": "var(--letter-spacing-tight)",
+      "color": "var(--color-display-label)",
+      "$note": "Large ornamental title on the display view"
+    },
+    "birdLabel": {
+      "fontFamily": "var(--font-family-display)",
+      "fontSize": "var(--font-size-caption)",
+      "fontWeight": "var(--font-weight-regular)",
+      "lineHeight": "var(--line-height-loose)",
+      "letterSpacing": "var(--letter-spacing-widest)",
+      "textTransform": "var(--text-transform-label)",
+      "color": "var(--color-ink-700)",
+      "$note": "Species label beneath an illustration (US-004 defers labels, but tokens must be ready)"
+    },
+    "dashboardHeading": {
+      "fontFamily": "var(--font-family-dashboard)",
+      "fontSize": "var(--font-size-xl)",
+      "fontWeight": "var(--font-weight-semibold)",
+      "lineHeight": "var(--line-height-snug)",
+      "letterSpacing": "var(--letter-spacing-normal)",
+      "color": "var(--color-dash-text)"
+    },
+    "dashboardBody": {
+      "fontFamily": "var(--font-family-dashboard)",
+      "fontSize": "var(--font-size-base)",
+      "fontWeight": "var(--font-weight-regular)",
+      "lineHeight": "var(--line-height-relaxed)",
+      "letterSpacing": "var(--letter-spacing-normal)",
+      "color": "var(--color-dash-text)"
+    },
+    "heroButton": {
+      "fontFamily": "var(--font-family-dashboard)",
+      "fontSize": "var(--font-size-lg)",
+      "fontWeight": "var(--font-weight-bold)",
+      "lineHeight": "var(--line-height-tight)",
+      "letterSpacing": "var(--letter-spacing-wide)",
+      "textTransform": "var(--text-transform-label)",
+      "color": "var(--color-dash-interactive-text)",
+      "$note": "Hero Button label (US-003 AC 3)"
+    }
+  }
+}
