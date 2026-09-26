@@ -14,9 +14,41 @@ let mediaStream: MediaStream | null = null;
 let intentionallyStopped = false;
 let retryCount = 0;
 let wsRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let lastConnectionAttemptTime: number | null = null;
+let lastCloseCode: number | null = null;
+let lastCloseReason: string | null = null;
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000];
 const TARGET_SAMPLE_RATE = 16000;
 const FRAME_SAMPLES = TARGET_SAMPLE_RATE; // 1 second
+
+export interface AudioDiagnostics {
+  sampleRate: number | null;
+  state: string;
+  bufferSize: number;
+  frameSamples: number;
+  mediaStreamActive: boolean;
+  mediaStreamTrackCount: number;
+  lastConnectionAttemptTime: number | null;
+  lastCloseCode: number | null;
+  lastCloseReason: string | null;
+  retryCount: number;
+}
+
+/** Read-only snapshot of the audio pipeline and WS connection. */
+export function getAudioDiagnostics(): AudioDiagnostics {
+  return {
+    sampleRate: audioContext?.sampleRate ?? null,
+    state: audioContext?.state ?? 'closed',
+    bufferSize: 4096,
+    frameSamples: FRAME_SAMPLES,
+    mediaStreamActive: mediaStream !== null,
+    mediaStreamTrackCount: mediaStream?.getAudioTracks().length ?? 0,
+    lastConnectionAttemptTime,
+    lastCloseCode,
+    lastCloseReason,
+    retryCount,
+  };
+}
 
 export function setStatusHandler(h: StatusChangeHandler) {
   onStatusChange = h;
@@ -123,6 +155,7 @@ function _connectWs() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const url = `${protocol}//${location.host}/ws/audio?token=${encodeURIComponent(token)}`;
   log('WS_AUDIO', 'connecting…');
+  lastConnectionAttemptTime = Date.now();
 
   ws = new WebSocket(url);
   ws.binaryType = 'arraybuffer';
@@ -138,6 +171,8 @@ function _connectWs() {
   };
 
   ws.onclose = (event) => {
+    lastCloseCode = event.code;
+    lastCloseReason = event.reason || null;
     log('WS_AUDIO', `closed (code ${event.code})`);
     if (intentionallyStopped) return;
     if (event.code === 4001) {

@@ -21,6 +21,11 @@ export function log(tag: string, msg: string): void {
   _buffer.push({ ts: _ts(), tag, msg });
 }
 
+/** Clear all buffered entries. */
+export function clearEntries(): void {
+  _buffer.length = 0;
+}
+
 /** All buffered entries, oldest first. */
 export function getEntries(): readonly LogEntry[] {
   return _buffer;
@@ -29,4 +34,12 @@ export function getEntries(): readonly LogEntry[] {
 /** Last `n` entries, oldest first within the tail. */
 export function getTail(n = 50): readonly LogEntry[] {
   return _buffer.slice(-n);
+}
+
+// Capture unhandled promise rejections in the log buffer.
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', event => {
+    const reason = event.reason instanceof Error ? event.reason.message : String(event.reason);
+    log('ERROR', `Unhandled rejection: ${reason}`);
+  });
 }

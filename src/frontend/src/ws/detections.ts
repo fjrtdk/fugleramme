@@ -13,6 +13,26 @@ const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000];
 let onDetection: DetectionHandler | null = null;
 let onSettingsChanged: SettingsHandler | null = null;
 let intentionallyClosed = false;
+let lastConnectionAttemptTime: number | null = null;
+let lastCloseCode: number | null = null;
+let lastCloseReason: string | null = null;
+
+export interface WsDiagnostics {
+  lastConnectionAttemptTime: number | null;
+  lastCloseCode: number | null;
+  lastCloseReason: string | null;
+  retryCount: number;
+}
+
+/** Read-only snapshot of the detections WebSocket connection. */
+export function getWsDiagnostics(): WsDiagnostics {
+  return {
+    lastConnectionAttemptTime,
+    lastCloseCode,
+    lastCloseReason,
+    retryCount,
+  };
+}
 
 /** Current WebSocket readyState for the detections connection. */
 export function getDetectionsWsState(): number {
