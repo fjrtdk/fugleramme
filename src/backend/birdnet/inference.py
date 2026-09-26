@@ -27,6 +27,15 @@ CONFIDENCE_THRESHOLD = 0.5
 _TARGET_SAMPLES = 144_000       # 3 s × 48 000 Hz — BirdNET input width
 _MAX_INT16 = 32_768.0           # normalisation divisor
 
+# BirdNET includes non-bird classes that should never be displayed.
+# Filter is case-insensitive and matches the start of the common or scientific name.
+_BLOCKED_PREFIXES = ("human", "noise", "environmental")
+
+
+def _is_blocked(name: str) -> bool:
+    lower = name.lower().strip()
+    return any(lower.startswith(prefix) for prefix in _BLOCKED_PREFIXES)
+
 
 @dataclass
 class Detection:
@@ -116,6 +125,14 @@ def run_inference(
             if conf < confidence_threshold:
                 break   # sorted descending — nothing below this will qualify
             label = state.labels[idx]
+            if _is_blocked(label.common_name) or _is_blocked(label.scientific_name):
+                logger.info(
+                    "Filtered non-bird detection: %s / %s (confidence=%.4f)",
+                    label.common_name,
+                    label.scientific_name,
+                    conf,
+                )
+                continue
             detections.append(
                 Detection(
                     common_name=label.common_name,
