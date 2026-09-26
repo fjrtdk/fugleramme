@@ -25,6 +25,12 @@ let isDisplayActive = false;
 
 async function route() {
   const hash = (location.hash.replace('#', '') || 'login') as Route;
+
+  // Guard against Supabase auth hash fragments — let onAuthStateChange handle them
+  if (/^(access_token|error|error_code|type)=/.test(hash)) {
+    return;
+  }
+
   const root = app();
 
   // Privacy page — accessible without auth
@@ -134,10 +140,10 @@ function flipToDashboard() {
 export function initRouter() {
   // Mirror Supabase auth events into app state and drive navigation
   supabase.auth.onAuthStateChange((event, session) => {
-    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && session) {
       state.setToken(session.access_token);
       state.setUser(supabaseUserToAppUser(session.user));
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         const appUser = state.getUser()!;
         const current = (location.hash.replace('#', '') || 'login') as Route;
         if (current === 'login' || current === 'register') {
