@@ -170,10 +170,12 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
       diagSection.classList.add('hidden');
       diagToggleBtn.setAttribute('aria-expanded', 'false');
       diagToggleBtn.classList.remove('active');
+      log('SETTINGS', 'Settings panel closed');
     } else {
       diagSection.classList.remove('hidden');
       diagToggleBtn.setAttribute('aria-expanded', 'true');
       diagToggleBtn.classList.add('active');
+      log('SETTINGS', 'Settings panel opened');
       if (!diagRendered) {
         const mount = diagSection.querySelector<HTMLElement>('#diagnostics-panel-mount')!;
         renderDiagnostics(mount);
@@ -185,6 +187,7 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
   // Display mode change → show/hide collage-only rows
   const modeSelect = container.querySelector<HTMLSelectElement>('#s-display-mode')!;
   modeSelect.addEventListener('change', () => {
+    log('SETTINGS', `Display mode changed to ${modeSelect.value}`);
     updateCollageOnlyVisibility(modeSelect.value);
   });
 
@@ -198,7 +201,14 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
   // Font preview: update CSS variable live
   const fontSelect = container.querySelector<HTMLSelectElement>('#s-font-family')!;
   fontSelect.addEventListener('change', () => {
+    log('SETTINGS', `Font changed to ${fontSelect.value}`);
     document.documentElement.style.setProperty('--display-font', `'${fontSelect.value}', Georgia, serif`);
+  });
+
+  // Artwork style change
+  const artworkSelect = container.querySelector<HTMLSelectElement>('#s-artwork-style')!;
+  artworkSelect.addEventListener('change', () => {
+    log('SETTINGS', `Artwork style changed to ${artworkSelect.value}`);
   });
 
   // Save settings
@@ -215,10 +225,16 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
     let settings = state.getSettings();
     if (!settings) {
       const res = await getSettings();
+      if (res.error) {
+        log('ERROR', `Failed to load settings: ${res.error.message}`);
+      }
       if (res.data) {
         settings = res.data;
         state.setSettings(settings);
+        log('SETTINGS', `Loaded settings: ${JSON.stringify(settings)}`);
       }
+    } else {
+      log('SETTINGS', `Loaded settings: ${JSON.stringify(settings)}`);
     }
     if (settings) populateSettingsForm(container, settings);
   }
@@ -332,10 +348,13 @@ async function saveSettings(container: HTMLElement) {
     state.setSettings(res.data);
     saveStatus.textContent = 'Saved';
     saveStatus.className = 'settings-save-status success';
+    log('SETTINGS', `Saved settings: ${JSON.stringify(res.data)}`);
     setTimeout(() => { saveStatus.className = 'settings-save-status hidden'; }, 2000);
   } else {
-    saveStatus.textContent = res.error?.message ?? 'Save failed';
+    const message = res.error?.message ?? 'Save failed';
+    saveStatus.textContent = message;
     saveStatus.className = 'settings-save-status error';
+    log('ERROR', `Failed to save settings: ${message}`);
   }
 }
 

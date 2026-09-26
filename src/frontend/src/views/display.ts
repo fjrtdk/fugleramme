@@ -4,6 +4,7 @@ import { mountCollage, unmountCollage, handleDetection as collageDetect, refresh
 import { mountLatestBird, unmountLatestBird, handleDetection as latestDetect } from '../display/latest-bird';
 import { mountNewestArrival, unmountNewestArrival, handleDetection as newestDetect } from '../display/newest-arrival';
 import { state } from '../state';
+import { log } from '../lib/logger';
 import type { Detection, Settings } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
 
@@ -51,6 +52,7 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
     else if (currentMode === 'newest_arrival') unmountNewestArrival();
 
     currentMode = mode;
+    log('DISPLAY', `Switched display mode to ${mode}`);
 
     if (mode === 'collage') mountCollage(canvas, emptyPerch);
     else if (mode === 'latest_bird') mountLatestBird(canvas, emptyPerch);
@@ -152,6 +154,7 @@ function applyMarginToCanvas(canvas: HTMLElement, marginPercent: number) {
 /** Apply the chosen font family to all bird label elements via a CSS custom property. */
 function applyDisplayFont(fontFamily: string) {
   document.documentElement.style.setProperty('--display-font', `'${fontFamily}', Georgia, serif`);
+  log('DISPLAY', `Applied font ${fontFamily}`);
 }
 
 function micStatusLabel(status: MicStatus): string {

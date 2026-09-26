@@ -67,6 +67,7 @@ function _connect() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
   const url = `${protocol}//${location.host}/ws/detections?token=${encodeURIComponent(token)}`;
   log('WS_DET', 'connecting…');
+  lastConnectionAttemptTime = Date.now();
 
   ws = new WebSocket(url);
   ws.binaryType = 'arraybuffer';
@@ -88,6 +89,8 @@ function _connect() {
   };
 
   ws.onclose = (event) => {
+    lastCloseCode = event.code;
+    lastCloseReason = event.reason || null;
     log('WS_DET', `closed (code ${event.code})`);
     if (intentionallyClosed) return;
     if (event.code === 4001) {

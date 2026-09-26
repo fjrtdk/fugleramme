@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { log } from '../lib/logger';
 import type { Settings } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
 import type { ApiResponse } from './client';
@@ -22,6 +23,7 @@ export async function getSettings(): Promise<ApiResponse<Settings>> {
     .maybeSingle();
 
   if (error) {
+    log('ERROR', `getSettings DB error: ${error.message}`);
     return { status: 500, error: { code: 'DB_ERROR', message: error.message } };
   }
 
@@ -45,6 +47,7 @@ export async function putSettings(settings: Settings): Promise<ApiResponse<Setti
     .single();
 
   if (error) {
+    log('ERROR', `putSettings DB error: ${error.message}`);
     return { status: 500, error: { code: 'DB_ERROR', message: error.message } };
   }
 

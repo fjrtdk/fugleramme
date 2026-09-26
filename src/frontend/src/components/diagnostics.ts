@@ -1,8 +1,11 @@
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseUrl } from '../lib/supabase';
 import { state } from '../state';
-import { getTail, getEntries } from '../lib/logger';
-import { getAudioWsState } from '../ws/audio';
-import { getDetectionsWsState } from '../ws/detections';
+import { getTail, getEntries, clearEntries } from '../lib/logger';
+import { getAudioWsState, getAudioDiagnostics } from '../ws/audio';
+import { getDetectionsWsState, getWsDiagnostics } from '../ws/detections';
+import { getRenderedBirdCount as getCollageCount } from '../display/collage';
+import { getRenderedBirdCount as getLatestCount } from '../display/latest-bird';
+import { getRenderedBirdCount as getNewestCount } from '../display/newest-arrival';
 
 type RowStatus = 'ok' | 'warn' | 'error' | 'neutral';
 
@@ -51,6 +54,7 @@ export function renderDiagnostics(container: HTMLElement): void {
         <h3 class="diag-section-title">Doctor Report</h3>
         <div class="diag-action-row">
           <button class="btn-diag-test" id="diag-run-doctor">Run Doctor</button>
+          <button class="btn-diag-test btn-diag-refresh hidden" id="diag-refresh-doctor">Refresh</button>
           <button class="btn-diag-test btn-diag-copy hidden" id="diag-copy-report">Copy Report</button>
           <span class="diag-test-result hidden" id="diag-doctor-status"></span>
         </div>
@@ -67,6 +71,7 @@ export function renderDiagnostics(container: HTMLElement): void {
         <div class="diag-log-body hidden" id="diag-log-body">
           <div class="diag-action-row">
             <button class="btn-diag-test" id="diag-log-refresh">Refresh</button>
+            <button class="btn-diag-test btn-diag-clear" id="diag-log-clear">Clear Log</button>
           </div>
           <div class="diag-log-entries" id="diag-log-entries"></div>
         </div>
@@ -268,6 +273,20 @@ function renderWsSection(container: HTMLElement): void {
 
 // ── Doctor Report ─────────────────────────────────────────────
 
+function getTotalRenderedBirds(): number {
+  return getCollageCount() + getLatestCount() + getNewestCount();
+}
+
+function formatIso(ts: number | null): string {
+  if (ts === null) return 'never';
+  return new Date(ts).toISOString();
+}
+
+function withLineNumbers(lines: string[]): string[] {
+  const width = String(lines.length).length;
+  return lines.map((line, i) => `${String(i + 1).padStart(width, '0')}: ${line}`);
+}
+
 async function buildDoctorReport(): Promise<string> {
   const lines: string[] = [];
   const wsStateLabels: Record<number, string> = {
@@ -280,8 +299,91 @@ async function buildDoctorReport(): Promise<string> {
   lines.push('=== Fugleramme Doctor ===');
   lines.push(`Timestamp: ${new Date().toISOString()}`);
   lines.push(`Browser: ${navigator.userAgent}`);
-  lines.push(`Secure Context: ${window.isSecureContext ? '✅' : '❌'}`);
-  lines.push(`MediaDevices API: ${typeof navigator.mediaDevices !== 'undefined' ? '✅' : '❌'}`);
+  lines.push(`Secure Context: ${window.isSecureContext ? 'Yes' : 'No'}`);
+  lines.push(`MediaDevices API: ${typeof navigator.mediaDevices !== 'undefined' ? 'Yes' : 'No'}`);
+
+  // Network
+  lines.push('');
+  lines.push('=== Network ===');
+  lines.push(`Origin: ${window.location.origin}`);
+  lines.push(`Hostname: ${window.location.hostname}`);
+  lines.push(`HTTPS: ${window.location.protocol === 'https:' ? 'Yes' : 'No'}`);
+  lines.push(`Audio WS URL: ${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/audio`);
+  lines.push(`Detections WS URL: ${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/detections`);
+
+  // Display
+  const settings = state.getSettings();
+  lines.push('');
+  lines.push('=== Display ===');
+  lines.push(`Display mode: ${settings?.display_mode ?? 'not loaded'}`);
+  lines.push(`Viewport: ${window.innerWidth}x${window.innerHeight}`);
+  lines.push(`Rendered birds: ${getTotalRenderedBirds()}`);
+  lines.push(`Font family: ${settings?.font_family ?? 'default'}`);
+  lines.push(`Artwork style: ${settings?.artwork_style ?? 'default'}`);
+
+  // Audio Pipeline
+  const audioDiag = getAudioDiagnostics();
+  lines.push('');
+  lines.push('=== Audio Pipeline ===');
+  lines.push(`Sample rate: ${audioDiag.sampleRate ?? 'N/A'} Hz`);
+  lines.push(`AudioContext state: ${audioDiag.state}`);
+  lines.push(`ScriptProcessor buffer size: ${audioDiag.bufferSize}`);
+  lines.push(`Frame samples: ${audioDiag.frameSamples}`);
+  lines.push(`Microphone active: ${audioDiag.mediaStreamActive ? 'Yes' : 'No'}`);
+  lines.push(`Microphone tracks: ${audioDiag.mediaStreamTrackCount}`);
+
+  // Settings
+  lines.push('');
+  lines.push('=== Settings ===');
+  if (settings) {
+    lines.push(`display_mode: ${settings.display_mode}`);
+    lines.push(`margin_percent: ${settings.margin_percent}`);
+    lines.push(`lookback_window: ${settings.lookback_window}`);
+    lines.push(`max_species: ${settings.max_species ?? 'null'}`);
+    lines.push(`species_sort: ${settings.species_sort}`);
+    lines.push(`latitude: ${settings.latitude ?? 'null'}`);
+    lines.push(`longitude: ${settings.longitude ?? 'null'}`);
+    lines.push(`font_family: ${settings.font_family}`);
+    lines.push(`artwork_style: ${settings.artwork_style}`);
+    lines.push(`show_species_label: ${settings.show_species_label}`);
+    lines.push(`label_language: ${settings.label_language}`);
+    lines.push('confidence_threshold: not configured');
+  } else {
+    lines.push('Settings not loaded');
+  }
+
+  // Supabase Details
+  lines.push('');
+  lines.push('=== Supabase Details ===');
+  lines.push(`URL: ${supabaseUrl}`);
+  const source = import.meta.env.VITE_SUPABASE_URL ? 'injected' : 'same-origin proxy';
+  lines.push(`Configuration source: ${source}`);
+  try {
+    const url = new URL(supabaseUrl);
+    const refMatch = url.hostname.match(/^([^.]+)\.supabase\.co$/);
+    lines.push(`Project ref: ${refMatch ? refMatch[1] : 'N/A'}`);
+  } catch {
+    lines.push('Project ref: N/A');
+  }
+
+  // WebSocket Details
+  const audioWsState = getAudioWsState();
+  const detWsState = getDetectionsWsState();
+  const audioWsDiag = getAudioDiagnostics();
+  const detWsDiag = getWsDiagnostics();
+  lines.push('');
+  lines.push('=== WebSocket Details ===');
+  lines.push(`Audio WS state: ${wsStateLabels[audioWsState] ?? 'unknown'}`);
+  lines.push(`Detections WS state: ${wsStateLabels[detWsState] ?? 'unknown'}`);
+  lines.push(`Audio WS last attempt: ${formatIso(audioWsDiag.lastConnectionAttemptTime)}`);
+  lines.push(`Audio WS last close code: ${audioWsDiag.lastCloseCode ?? 'N/A'}`);
+  lines.push(`Audio WS last close reason: ${audioWsDiag.lastCloseReason ?? 'N/A'}`);
+  lines.push(`Audio WS reconnections: ${audioWsDiag.retryCount}`);
+  lines.push(`Detections WS last attempt: ${formatIso(detWsDiag.lastConnectionAttemptTime)}`);
+  lines.push(`Detections WS last close code: ${detWsDiag.lastCloseCode ?? 'N/A'}`);
+  lines.push(`Detections WS last close reason: ${detWsDiag.lastCloseReason ?? 'N/A'}`);
+  lines.push(`Detections WS reconnections: ${detWsDiag.retryCount}`);
+  lines.push('Latency/ping: not measured');
 
   // Mic permission
   let micPermission = 'unknown';
@@ -295,7 +397,9 @@ async function buildDoctorReport(): Promise<string> {
   } else {
     micPermission = 'Permissions API not available';
   }
-  lines.push(`Microphone Permission: ${micPermission}`);
+  lines.push('');
+  lines.push('=== Microphone ===');
+  lines.push(`Permission: ${micPermission}`);
 
   // Mic test (only if permission already granted — don't prompt)
   if (micPermission === 'granted') {
@@ -303,9 +407,9 @@ async function buildDoctorReport(): Promise<string> {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       const label = stream.getAudioTracks()[0]?.label || 'unknown device';
       stream.getTracks().forEach(t => t.stop());
-      lines.push(`Mic Test: ✅ (device: "${label}")`);
+      lines.push(`Mic Test: OK (device: "${label}")`);
     } catch (e) {
-      lines.push(`Mic Test: ❌ ${(e as Error).message}`);
+      lines.push(`Mic Test: Error — ${(e as Error).message}`);
     }
   } else {
     lines.push(`Mic Test: skipped (permission: ${micPermission})`);
@@ -327,29 +431,43 @@ async function buildDoctorReport(): Promise<string> {
   }
 
   // Supabase
+  lines.push('');
+  lines.push('=== Supabase Auth ===');
   try {
     const { data, error } = await supabase.auth.getSession();
     if (error) {
-      lines.push(`Supabase: ❌ ${error.message}`);
+      lines.push(`Status: Error — ${error.message}`);
     } else if (data.session) {
       const identity = data.session.user.email ?? data.session.user.id;
-      lines.push(`Supabase: ✅ authenticated (${identity})`);
+      lines.push(`Status: Authenticated (${identity})`);
       const expiresAt = data.session.expires_at;
       if (expiresAt) {
         lines.push(`Token Expiry: ${new Date(expiresAt * 1000).toISOString()}`);
       }
     } else {
-      lines.push('Supabase: ⚠️ no active session');
+      lines.push('Status: No active session');
     }
   } catch (e) {
-    lines.push(`Supabase: ❌ exception: ${(e as Error).message}`);
+    lines.push(`Status: Exception — ${(e as Error).message}`);
   }
 
   // WebSocket live state
-  const audioState = getAudioWsState();
-  const detState = getDetectionsWsState();
-  lines.push(`WebSocket Audio: ${audioState === WebSocket.OPEN ? '✅' : '⚠️'} ${wsStateLabels[audioState] ?? 'unknown'}`);
-  lines.push(`WebSocket Detections: ${detState === WebSocket.OPEN ? '✅' : '⚠️'} ${wsStateLabels[detState] ?? 'unknown'}`);
+  lines.push('');
+  lines.push('=== WebSocket Live State ===');
+  lines.push(`Audio WS: ${audioWsState === WebSocket.OPEN ? 'OK' : 'Not open'} (${wsStateLabels[audioWsState] ?? 'unknown'})`);
+  lines.push(`Detections WS: ${detWsState === WebSocket.OPEN ? 'OK' : 'Not open'} (${wsStateLabels[detWsState] ?? 'unknown'})`);
+
+  // Errors
+  lines.push('');
+  lines.push('=== Errors (last 10) ===');
+  const errors = getEntries().filter(e => e.tag === 'ERROR').slice(-10);
+  if (errors.length === 0) {
+    lines.push('(no errors logged)');
+  } else {
+    errors.forEach(e => {
+      lines.push(`[${e.ts}] ${e.msg}`);
+    });
+  }
 
   // Debug log tail
   lines.push('');
@@ -364,7 +482,7 @@ async function buildDoctorReport(): Promise<string> {
   }
   lines.push('=== End Report ===');
 
-  return lines.join('\n');
+  return withLineNumbers(lines).join('\n');
 }
 
 // ── Actions ───────────────────────────────────────────────────
@@ -472,23 +590,24 @@ function bindWsTest(container: HTMLElement): void {
 
 function bindDoctor(container: HTMLElement): void {
   const runBtn = container.querySelector<HTMLButtonElement>('#diag-run-doctor');
+  const refreshBtn = container.querySelector<HTMLButtonElement>('#diag-refresh-doctor');
   const copyBtn = container.querySelector<HTMLButtonElement>('#diag-copy-report');
   const statusEl = container.querySelector<HTMLElement>('#diag-doctor-status');
   const reportWrap = container.querySelector<HTMLElement>('#diag-report-wrap');
   const reportEl = container.querySelector<HTMLTextAreaElement>('#diag-report');
-  if (!runBtn || !copyBtn || !statusEl || !reportWrap || !reportEl) return;
+  if (!runBtn || !refreshBtn || !copyBtn || !statusEl || !reportWrap || !reportEl) return;
 
-  runBtn.addEventListener('click', async () => {
+  const generate = async () => {
     runBtn.disabled = true;
-    runBtn.textContent = 'Running…';
+    refreshBtn.disabled = true;
     statusEl.className = 'diag-test-result hidden';
-    copyBtn.classList.add('hidden');
 
     try {
       const report = await buildDoctorReport();
       reportEl.value = report;
       reportWrap.classList.remove('hidden');
       copyBtn.classList.remove('hidden');
+      refreshBtn.classList.remove('hidden');
       statusEl.textContent = 'Report ready';
       statusEl.className = 'diag-test-result ok';
       // Also refresh the log display
@@ -499,9 +618,13 @@ function bindDoctor(container: HTMLElement): void {
       statusEl.className = 'diag-test-result error';
     } finally {
       runBtn.disabled = false;
+      refreshBtn.disabled = false;
       runBtn.textContent = 'Run Doctor';
     }
-  });
+  };
+
+  runBtn.addEventListener('click', generate);
+  refreshBtn.addEventListener('click', generate);
 
   copyBtn.addEventListener('click', async () => {
     const text = reportEl.value;
@@ -527,6 +650,7 @@ function bindLogSection(container: HTMLElement): void {
   const body = container.querySelector<HTMLElement>('#diag-log-body');
   const chevron = container.querySelector<HTMLElement>('#diag-log-chevron');
   const refreshBtn = container.querySelector<HTMLButtonElement>('#diag-log-refresh');
+  const clearBtn = container.querySelector<HTMLButtonElement>('#diag-log-clear');
   if (!toggle || !body || !chevron) return;
 
   toggle.addEventListener('click', () => {
@@ -545,6 +669,12 @@ function bindLogSection(container: HTMLElement): void {
   });
 
   refreshBtn?.addEventListener('click', () => {
+    renderLogEntries(container);
+    updateLogCount(container);
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    clearEntries();
     renderLogEntries(container);
     updateLogCount(container);
   });

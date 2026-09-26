@@ -3,6 +3,7 @@ import { state } from '../state';
 import { BIRD_LINGER_MS } from '../types';
 import { resolveArtworkPathSync } from '../lib/artwork';
 import { getMassByName } from '../lib/bird-sizes';
+import { log } from '../lib/logger';
 
 // Logarithmic scale parameters — log(MAX_MASS_G+1) used as denominator
 const MAX_MASS_G = 5000; // heaviest common display species reference
@@ -67,6 +68,7 @@ export function handleDetection(detections: Detection[]) {
 
   enforceMaxSpecies(settings);
   updateEmptyState();
+  log('DISPLAY', `Rendered ${activeBirds.size} birds in collage mode`);
 }
 
 function resolveIllustrationPath(det: Detection): string | null {
@@ -303,4 +305,8 @@ export function refreshSettings() {
       labelEl.style.fontFamily = `'${settings.font_family}', Georgia, serif`;
     }
   });
+}
+
+export function getRenderedBirdCount(): number {
+  return activeBirds.size;
 }

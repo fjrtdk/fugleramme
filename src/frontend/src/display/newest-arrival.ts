@@ -2,6 +2,7 @@ import type { Detection, Settings } from '../types';
 import { state } from '../state';
 import { NEWEST_ARRIVAL_TIMEOUT_MS } from '../types';
 import { resolveArtworkPathSync } from '../lib/artwork';
+import { log } from '../lib/logger';
 
 let canvas: HTMLElement | null = null;
 let emptyPerch: HTMLElement | null = null;
@@ -87,6 +88,7 @@ function showNext() {
   }));
 
   updateEmptyState();
+  log('DISPLAY', 'Rendered 1 bird in newest_arrival mode');
 
   countdownTimer = setTimeout(() => {
     if (queue.length > 0) {
@@ -156,4 +158,8 @@ function lookbackWindowMs(w: string): number | null {
     case 'all': return null;
     default:    return 24 * 60 * 60 * 1000;
   }
+}
+
+export function getRenderedBirdCount(): number {
+  return currentEl ? 1 : 0;
 }

@@ -1277,6 +1277,14 @@
   background: var(--color-forest-800);
 }
 
+.btn-diag-refresh {
+  background: var(--color-ink-600);
+}
+
+.btn-diag-refresh:hover:not(:disabled) {
+  background: var(--color-ink-700);
+}
+
 .diag-report-wrap {
   padding: var(--space-3) var(--card-padding-md);
   background: var(--color-paper-200);
@@ -1301,6 +1309,16 @@
 }
 
 /* ── Debug Log Section ────────────────────────────────────── */
+
+.btn-diag-clear {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: var(--border-thin) solid var(--color-warning-border);
+}
+
+.btn-diag-clear:hover:not(:disabled) {
+  background: var(--color-warning-border);
+}
 
 .diag-section--log {
   border-bottom: none;

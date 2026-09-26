@@ -5,7 +5,7 @@ import type { User } from '../types';
 // Same-origin BaaS proxy is used when Verdent-injected env vars are absent (hosted/preview).
 // When running against the Python backend locally, set VITE_SUPABASE_URL and
 // VITE_SUPABASE_PUBLISHABLE_KEY in a .env file; Verdent Publish injects them automatically.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? window.location.origin;
+export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? window.location.origin;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? 'verdent-baas-proxy';
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {

@@ -1,6 +1,7 @@
 import type { Detection } from '../types';
 import { state } from '../state';
 import { resolveArtworkPathSync } from '../lib/artwork';
+import { log } from '../lib/logger';
 
 let canvas: HTMLElement | null = null;
 let emptyPerch: HTMLElement | null = null;
@@ -43,6 +44,7 @@ export function handleDetection(detections: Detection[]) {
   }));
 
   updateEmptyState();
+  log('DISPLAY', 'Rendered 1 bird in latest_bird mode');
 }
 
 function createBirdEl(det: Detection): HTMLElement {
@@ -89,4 +91,8 @@ function updateEmptyState() {
 
 export function refreshSettings() {
   // margin is applied via CSS on bird-single class
+}
+
+export function getRenderedBirdCount(): number {
+  return currentSciName ? 1 : 0;
 }
