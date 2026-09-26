@@ -3,6 +3,7 @@ import { getSettings, putSettings } from '../api/settings';
 import { state } from '../state';
 import { navigate } from '../router';
 import { renderDiagnostics } from '../components/diagnostics';
+import { log } from '../lib/logger';
 import type { Settings } from '../types';
 
 export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => void) {
@@ -64,6 +65,22 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
               <option value="rarest_window">The rarest in window</option>
               <option value="rarest_all_time">The rarest all time</option>
             </select>
+          </div>
+          <div class="setting-subheading" id="location-subheading">
+            <span class="setting-subheading-label">Location</span>
+            <span class="setting-subheading-hint">Used by BirdNET for geographic species priors</span>
+          </div>
+          <div class="setting-row" id="row-latitude">
+            <label class="setting-label" for="s-latitude">Latitude</label>
+            <input class="setting-number" type="number" id="s-latitude" min="-90" max="90" step="0.0001" placeholder="e.g. 55.6761" aria-describedby="lat-hint" />
+          </div>
+          <div class="setting-row" id="row-longitude">
+            <label class="setting-label" for="s-longitude">Longitude</label>
+            <input class="setting-number" type="number" id="s-longitude" min="-180" max="180" step="0.0001" placeholder="e.g. 12.5683" aria-describedby="lon-hint" />
+          </div>
+          <div class="setting-row setting-row-location-action">
+            <button class="btn-use-location" id="use-location-btn" type="button">Use My Location</button>
+            <span class="location-status hidden" id="location-status"></span>
           </div>
           <div class="setting-row setting-row-actions">
             <button class="btn-save-settings" id="save-settings">Save settings</button>
@@ -137,6 +154,11 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
     await saveSettings(container);
   });
 
+  // Use My Location
+  container.querySelector('#use-location-btn')!.addEventListener('click', () => {
+    useMyLocation(container);
+  });
+
   async function loadAndPopulateSettings() {
     let settings = state.getSettings();
     if (!settings) {
@@ -157,6 +179,8 @@ function populateSettingsForm(container: HTMLElement, s: Settings) {
   const lookbackEl = container.querySelector<HTMLSelectElement>('#s-lookback');
   const maxSpecEl = container.querySelector<HTMLSelectElement>('#s-max-species');
   const sortEl = container.querySelector<HTMLSelectElement>('#s-sort');
+  const latEl = container.querySelector<HTMLInputElement>('#s-latitude');
+  const lonEl = container.querySelector<HTMLInputElement>('#s-longitude');
 
   if (modeEl) modeEl.value = s.display_mode;
   if (marginEl) { marginEl.value = String(s.margin_percent); }
@@ -164,6 +188,8 @@ function populateSettingsForm(container: HTMLElement, s: Settings) {
   if (lookbackEl) lookbackEl.value = s.lookback_window;
   if (maxSpecEl) maxSpecEl.value = s.max_species == null ? 'null' : String(s.max_species);
   if (sortEl) sortEl.value = s.species_sort;
+  if (latEl) latEl.value = s.latitude != null ? String(s.latitude) : '';
+  if (lonEl) lonEl.value = s.longitude != null ? String(s.longitude) : '';
 
   updateCollageOnlyVisibility(s.display_mode);
 }
@@ -185,8 +211,34 @@ async function saveSettings(container: HTMLElement) {
   const lookbackEl = container.querySelector<HTMLSelectElement>('#s-lookback')!;
   const maxSpecEl = container.querySelector<HTMLSelectElement>('#s-max-species')!;
   const sortEl = container.querySelector<HTMLSelectElement>('#s-sort')!;
+  const latEl = container.querySelector<HTMLInputElement>('#s-latitude')!;
+  const lonEl = container.querySelector<HTMLInputElement>('#s-longitude')!;
   const saveBtn = container.querySelector<HTMLButtonElement>('#save-settings')!;
   const saveStatus = container.querySelector<HTMLElement>('#save-status')!;
+
+  const rawLat = latEl.value.trim();
+  const rawLon = lonEl.value.trim();
+  let latitude: number | null = null;
+  let longitude: number | null = null;
+
+  if (rawLat !== '') {
+    const v = parseFloat(rawLat);
+    if (isNaN(v) || v < -90 || v > 90) {
+      saveStatus.textContent = 'Latitude must be between -90 and 90';
+      saveStatus.className = 'settings-save-status error';
+      return;
+    }
+    latitude = v;
+  }
+  if (rawLon !== '') {
+    const v = parseFloat(rawLon);
+    if (isNaN(v) || v < -180 || v > 180) {
+      saveStatus.textContent = 'Longitude must be between -180 and 180';
+      saveStatus.className = 'settings-save-status error';
+      return;
+    }
+    longitude = v;
+  }
 
   const settings: Settings = {
     display_mode: modeEl.value as Settings['display_mode'],
@@ -194,6 +246,8 @@ async function saveSettings(container: HTMLElement) {
     lookback_window: lookbackEl.value as Settings['lookback_window'],
     max_species: maxSpecEl.value === 'null' ? null : parseInt(maxSpecEl.value, 10),
     species_sort: sortEl.value as Settings['species_sort'],
+    latitude,
+    longitude,
   };
 
   saveBtn.disabled = true;
@@ -209,6 +263,46 @@ async function saveSettings(container: HTMLElement) {
     saveStatus.textContent = res.error?.message ?? 'Save failed';
     saveStatus.className = 'settings-save-status error';
   }
+}
+
+function useMyLocation(container: HTMLElement) {
+  const locBtn = container.querySelector<HTMLButtonElement>('#use-location-btn')!;
+  const locStatus = container.querySelector<HTMLElement>('#location-status')!;
+  const latEl = container.querySelector<HTMLInputElement>('#s-latitude')!;
+  const lonEl = container.querySelector<HTMLInputElement>('#s-longitude')!;
+
+  if (!('geolocation' in navigator)) {
+    log('LOCATION', 'Geolocation API not available');
+    locStatus.textContent = 'Geolocation not supported';
+    locStatus.className = 'location-status error';
+    return;
+  }
+
+  log('LOCATION', 'Requesting geolocation');
+  locBtn.disabled = true;
+  locStatus.textContent = 'Locating…';
+  locStatus.className = 'location-status';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = parseFloat(pos.coords.latitude.toFixed(4));
+      const lon = parseFloat(pos.coords.longitude.toFixed(4));
+      latEl.value = String(lat);
+      lonEl.value = String(lon);
+      locBtn.disabled = false;
+      locStatus.textContent = 'Location set';
+      locStatus.className = 'location-status success';
+      log('LOCATION', `Geolocation success: ${lat}, ${lon}`);
+      setTimeout(() => { locStatus.className = 'location-status hidden'; }, 2000);
+    },
+    (err) => {
+      locBtn.disabled = false;
+      locStatus.textContent = err.code === 1 ? 'Permission denied' : 'Could not get location';
+      locStatus.className = 'location-status error';
+      log('LOCATION', `Geolocation error: ${err.message}`);
+    },
+    { timeout: 10000 }
+  );
 }
 
 function escapeHtml(s: string): string {

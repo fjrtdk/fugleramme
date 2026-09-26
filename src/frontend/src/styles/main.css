@@ -557,6 +557,108 @@
   color: var(--color-forest-800);
 }
 
+/* ── Settings: Location Group ─────────────────────────────── */
+
+.setting-subheading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--card-padding-md) var(--space-1);
+  background: var(--color-paper-200);
+  border-bottom: var(--border-hairline) solid var(--color-dash-border);
+}
+
+.setting-subheading-label {
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-dash-text-muted);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+}
+
+.setting-subheading-hint {
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-400);
+}
+
+.setting-number {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-thin) solid var(--color-dash-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-paper-100);
+  color: var(--color-dash-text);
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-sm);
+  min-height: var(--touch-target-min);
+  min-width: 140px;
+  transition: border-color var(--micro-button-hover) var(--ease-out);
+  -moz-appearance: textfield;
+}
+
+.setting-number::-webkit-inner-spin-button,
+.setting-number::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+.setting-number:focus-visible {
+  outline: 2px solid var(--color-dash-focus);
+  outline-offset: 0;
+  border-color: var(--color-forest-600);
+}
+
+.setting-row-location-action {
+  justify-content: flex-start;
+  gap: var(--space-4);
+}
+
+.btn-use-location {
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  color: var(--color-forest-700);
+  border: var(--border-thin) solid var(--color-forest-400);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  min-height: var(--touch-target-min);
+  transition:
+    background-color var(--micro-button-hover) var(--ease-out),
+    border-color var(--micro-button-hover) var(--ease-out);
+}
+
+.btn-use-location:hover:not(:disabled) {
+  background: var(--color-success-bg);
+  border-color: var(--color-forest-600);
+}
+
+.btn-use-location:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.location-status {
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-xs);
+}
+
+.location-status.success {
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+  border: var(--border-thin) solid var(--color-success-border);
+}
+
+.location-status.error {
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+  border: var(--border-thin) solid var(--color-error-border);
+}
+
 /* ── Privacy Page ─────────────────────────────────────────── */
 
 .privacy-page {

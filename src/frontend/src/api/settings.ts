@@ -11,7 +11,7 @@ export async function getSettings(): Promise<ApiResponse<Settings>> {
 
   const { data, error } = await supabase
     .from('user_settings')
-    .select('display_mode, margin_percent, lookback_window, max_species, species_sort')
+    .select('display_mode, margin_percent, lookback_window, max_species, species_sort, latitude, longitude')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -35,7 +35,7 @@ export async function putSettings(settings: Settings): Promise<ApiResponse<Setti
       { user_id: user.id, ...settings },
       { onConflict: 'user_id' }
     )
-    .select('display_mode, margin_percent, lookback_window, max_species, species_sort')
+    .select('display_mode, margin_percent, lookback_window, max_species, species_sort, latitude, longitude')
     .single();
 
   if (error) {

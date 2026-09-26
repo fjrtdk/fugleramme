@@ -13,6 +13,8 @@ export interface Settings {
   lookback_window: '15m' | '1h' | '6h' | '24h' | 'all';
   max_species: number | null;
   species_sort: 'most_heard' | 'rarest_window' | 'rarest_all_time';
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface Detection {
@@ -48,6 +50,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lookback_window: '24h',
   max_species: 40,
   species_sort: 'most_heard',
+  latitude: null,
+  longitude: null,
 };
 
 // Linger time for collage birds (default 60 seconds per US-004 AC 9)
