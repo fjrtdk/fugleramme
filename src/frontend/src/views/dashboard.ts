@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { getSettings, putSettings } from '../api/settings';
 import { state } from '../state';
 import { navigate } from '../router';
+import { renderDiagnostics } from '../components/diagnostics';
 import type { Settings } from '../types';
 
 export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => void) {
@@ -10,7 +11,10 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
     <div class="dashboard-page" id="dashboard-inner">
       <header class="dashboard-header">
         <span class="dashboard-greeting">Welcome back, ${escapeHtml(user.username)}</span>
-        <button class="btn-logout" id="logout-btn">Log out</button>
+        <div class="dashboard-header-actions">
+          <button class="btn-diag-toggle" id="diag-toggle-btn" aria-expanded="false" aria-controls="diagnostics-section">Diagnostics</button>
+          <button class="btn-logout" id="logout-btn">Log out</button>
+        </div>
       </header>
       <main class="dashboard-main">
         <button class="hero-button" id="hero-btn" aria-label="Start Fugleramme">
@@ -68,6 +72,10 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
           <p class="settings-data-notice">Detection data is stored locally. Delete your account to remove all data. <a class="settings-privacy-link" href="#privacy">Privacy Policy</a></p>
         </div>
       </section>
+      <section class="diagnostics-section hidden" id="diagnostics-section" aria-label="Diagnostics">
+        <h2 class="settings-heading">Diagnostics</h2>
+        <div id="diagnostics-panel-mount"></div>
+      </section>
     </div>
   `;
 
@@ -86,6 +94,29 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
     state.setUser(null);
     state.setSettings(null);
     navigate('login');
+  });
+
+  // Diagnostics toggle
+  const diagToggleBtn = container.querySelector<HTMLButtonElement>('#diag-toggle-btn')!;
+  const diagSection = container.querySelector<HTMLElement>('#diagnostics-section')!;
+  let diagRendered = false;
+
+  diagToggleBtn.addEventListener('click', () => {
+    const isOpen = diagToggleBtn.getAttribute('aria-expanded') === 'true';
+    if (isOpen) {
+      diagSection.classList.add('hidden');
+      diagToggleBtn.setAttribute('aria-expanded', 'false');
+      diagToggleBtn.classList.remove('active');
+    } else {
+      diagSection.classList.remove('hidden');
+      diagToggleBtn.setAttribute('aria-expanded', 'true');
+      diagToggleBtn.classList.add('active');
+      if (!diagRendered) {
+        const mount = diagSection.querySelector<HTMLElement>('#diagnostics-panel-mount')!;
+        renderDiagnostics(mount);
+        diagRendered = true;
+      }
+    }
   });
 
   // Display mode change → show/hide collage-only rows
