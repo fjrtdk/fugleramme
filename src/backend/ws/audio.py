@@ -70,6 +70,13 @@ async def _process_buffer(
     4. Sends the message back on the audio WebSocket.
     5. Broadcasts the same message to all /ws/detections clients for this user.
     """
+    logger.info(
+        "_process_buffer entry user=%s frames=%d model_loaded=%s",
+        user_id,
+        len(buffer),
+        birdnet_state is not None,
+    )
+
     if birdnet_state is None:
         await websocket.send_text(
             _error_msg(

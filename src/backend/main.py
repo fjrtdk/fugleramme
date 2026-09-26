@@ -29,15 +29,18 @@ async def lifespan(app: FastAPI):
     # ── BirdNET model ─────────────────────────────────────────────────────────
     from src.backend.birdnet import load_birdnet, seed_species_if_empty  # noqa: PLC0415
 
+    app.state.birdnet_load_error = None
     try:
         load_birdnet()
         logger.info("BirdNET model loaded.")
     except FileNotFoundError as exc:
+        app.state.birdnet_load_error = str(exc)
         logger.warning("BirdNET model files missing — inference disabled: %s", exc)
         logger.warning(
             "Download them with: uv run python -m src.backend.birdnet.download_model"
         )
     except RuntimeError as exc:
+        app.state.birdnet_load_error = str(exc)
         logger.warning("BirdNET backend unavailable — inference disabled: %s", exc)
 
     # ── Species seeding ───────────────────────────────────────────────────────
@@ -113,7 +116,26 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    from src.backend.birdnet import birdnet_state  # noqa: PLC0415
+
+    return {"status": "ok", "birdnet": birdnet_state is not None}
+
+
+@app.get("/health/birdnet")
+async def health_birdnet(request: Request):
+    from src.backend.birdnet import birdnet_state  # noqa: PLC0415
+    from src.backend.birdnet.model import _DEFAULT_MODEL_DIR, MODEL_FILENAME  # noqa: PLC0415
+
+    model_loaded = birdnet_state is not None
+    labels = birdnet_state.labels if model_loaded else []
+
+    return {
+        "model_loaded": model_loaded,
+        "model_path": str(_DEFAULT_MODEL_DIR / MODEL_FILENAME),
+        "labels_loaded": bool(labels),
+        "labels_count": len(labels),
+        "error": getattr(request.app.state, "birdnet_load_error", None),
+    }
 
 
 # ── Routers ────────────────────────────────────────────────────────────────────
