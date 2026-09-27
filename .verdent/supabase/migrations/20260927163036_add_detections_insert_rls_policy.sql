@@ -1,0 +1,1 @@
+CREATE POLICY "users insert own detections" ON public.detections FOR INSERT TO public WITH CHECK (auth.uid() = user_id);

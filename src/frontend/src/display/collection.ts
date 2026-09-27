@@ -94,6 +94,8 @@ function renderFromState() {
   entries.sort((a, b) => b.detectedAt - a.detectedAt);
 
   const selected = entries.slice(0, max);
+  log('DEBUG', `collection state has ${allDets.length} detections, rendering ${selected.length} birds`);
+
   const targetSpecies = new Set(selected.map(e => e.sci));
 
   // Remove birds that fell out of the top max_species.

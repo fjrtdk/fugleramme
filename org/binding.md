@@ -4,9 +4,9 @@ Bound once at project start per Charter §2. This binding is authoritative; if t
 repository structure and this file disagree, this file wins until amended.
 
 **Project:** Fugleramme — full-stack monolithic PWA for local birdsong detection.
-Python backend (FastAPI + BirdNET TFLite), TypeScript/JS frontend (PWA), SQLite
-persistence, WebSockets for audio streaming and detection push. No cloud API keys,
-fully local. Repository is greenfield (only `.git` exists at binding time).
+Python backend (FastAPI + BirdNET TFLite), TypeScript/JS frontend (PWA), Supabase
+persistence (user settings, detections), WebSockets for audio streaming and detection
+push. Verdent OAuth + Supabase auth. Deployed fullstack on Verdent.
 
 ## Resolved directory map
 
@@ -16,7 +16,8 @@ fully local. Repository is greenfield (only `.git` exists at binding time).
 | `src/frontend/` | TypeScript PWA frontend |
 | `assets/artwork/` | Bird illustrations, bundled |
 | `assets/fonts/` | Fonts, bundled |
-| `migrations/` | SQLite migrations |
+| `.verdent/supabase/migrations/` | Supabase migrations |
+| `migrations/` | Legacy SQLite migrations (unused) |
 | `tests/` | Test suite |
 | `docs/` | Documentation |
 | `contracts/` | API, WebSocket, schema, tokens, security policy |
@@ -34,7 +35,7 @@ fully local. Repository is greenfield (only `.git` exists at binding time).
 | `@Contract` | active | `spec/` | `contracts/` | `claude-sonnet-4-6` | — | — |
 | `@Design` | active | `spec/` (UX stories) | `contracts/tokens/` | `claude-sonnet-4-6` | — | — |
 | `@Backend` | active | `contracts/` | `src/backend/` | `claude-sonnet-4-6` | `uv sync && uv run uvicorn src.backend.main:app` | `uv run pytest tests/` |
-| `@Data` | active | `contracts/` (schema section) | `migrations/` | `claude-sonnet-4-6` | — | `uv run pytest tests/` (migration tests) |
+| `@Data` | active | `contracts/` (schema section) | `.verdent/supabase/migrations/` | `claude-sonnet-4-6` | — | `uv run pytest tests/` (migration tests) |
 | `@Infra` | active | all build/deploy config | `infra/` | `claude-haiku-4-5` | (defines the above commands) | — |
 | `@Pipeline` | inactive | — | — | — | — | — |
 | `@Content` | active | content spec in `spec/` | `assets/artwork/`, `assets/fonts/` | `claude-sonnet-4-6` | — | — |
@@ -77,7 +78,7 @@ Checked every active role's write path against every other active role's write p
 - `@Contract` → `contracts/`
 - `@Design` → `contracts/tokens/` (subdirectory of `@Contract`'s scope)
 - `@Backend` → `src/backend/`
-- `@Data` → `migrations/`
+- `@Data` → `.verdent/supabase/migrations/`
 - `@Infra` → `infra/`
 - `@Content` → `assets/artwork/`, `assets/fonts/`
 - `@Web` → `src/frontend/`

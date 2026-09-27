@@ -38,6 +38,13 @@ export async function loadDetections(
     return [];
   }
 
+  const count = data?.length ?? 0;
+  const first = count > 0 ? data![0] : null;
+  const firstName = first
+    ? ((first.species_scientific as string | undefined) ?? (first.species_common as string | undefined) ?? 'unknown')
+    : null;
+  log('DEBUG', `loadDetections loaded ${count} rows${firstName ? `, first: ${firstName}` : ''}`);
+
   return (data ?? []).map(row => mapRowToDetection(row));
 }
 
