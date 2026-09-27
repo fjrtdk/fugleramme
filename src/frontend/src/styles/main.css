@@ -482,6 +482,19 @@
   border-color: var(--color-forest-600);
 }
 
+.setting-select:disabled,
+.setting-number:disabled,
+.setting-range:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--color-paper-200);
+}
+
+.setting-toggle input:disabled + .setting-toggle-track {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .setting-range {
   flex: 1;
   max-width: 160px;
@@ -517,6 +530,52 @@
 .btn-save-settings:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn-clear-collection {
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  color: var(--color-forest-700);
+  border: var(--border-thin) solid var(--color-forest-400);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  min-height: var(--touch-target-min);
+  transition:
+    background-color var(--micro-button-hover) var(--ease-out),
+    border-color var(--micro-button-hover) var(--ease-out);
+}
+
+.btn-clear-collection:hover:not(:disabled) {
+  background: var(--color-success-bg);
+  border-color: var(--color-forest-600);
+}
+
+.btn-clear-collection:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.clear-collection-status {
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-xs);
+}
+
+.clear-collection-status.success {
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+  border: var(--border-thin) solid var(--color-success-border);
+}
+
+.clear-collection-status.error {
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+  border: var(--border-thin) solid var(--color-error-border);
 }
 
 .settings-save-status {

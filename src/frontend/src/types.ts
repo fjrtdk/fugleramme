@@ -8,7 +8,7 @@ export interface User {
 }
 
 export interface Settings {
-  display_mode: 'collage' | 'latest_bird' | 'newest_arrival';
+  display_mode: 'collage' | 'latest_bird' | 'newest_arrival' | 'collection';
   margin_percent: number;
   lookback_window: '15m' | '1h' | '6h' | '24h' | 'all';
   max_species: number | null;
@@ -65,8 +65,3 @@ export const DEFAULT_SETTINGS: Settings = {
   confidence_threshold: 0.5,
   audio_source_device_id: null,
 };
-
-// Linger time for collage birds (default 60 seconds per US-004 AC 9)
-export const BIRD_LINGER_MS = 60_000;
-// Newest arrival display timeout (default 30 seconds per US-009 AC 4)
-export const NEWEST_ARRIVAL_TIMEOUT_MS = 30_000;

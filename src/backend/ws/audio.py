@@ -2,17 +2,18 @@
 
 Accepts binary PCM frames from the client (16 kHz, PCM int16 mono, 32 000 bytes
 each), accumulates 3-frame buffers, runs BirdNET TFLite inference, persists
-detections to SQLite, and broadcasts results to /ws/detections clients.
+detections to Supabase, and broadcasts results to /ws/detections clients.
 
 Authentication is via query-parameter JWT.  Invalid token → close 4001.
 """
 
+import asyncio
 import json
 import logging
-import uuid
 from datetime import datetime, timezone
 
 import aiosqlite
+import httpx
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError
 
@@ -22,7 +23,7 @@ from src.backend.auth.jwt_utils import (
     validate_supabase_token,
 )
 from src.backend import birdnet as birdnet_mod
-from src.backend.birdnet.inference import run_inference
+from src.backend.birdnet.inference import Detection, run_inference
 from src.backend.config import settings
 from src.backend.ws.manager import manager
 
@@ -56,6 +57,43 @@ async def _apply_pragmas(db: aiosqlite.Connection) -> None:
     await db.execute("PRAGMA synchronous = NORMAL")
 
 
+async def _save_detection_to_supabase(
+    user_id: str, det: Detection, token: str
+) -> None:
+    """Persist a single detection to Supabase public.detections via PostgREST.
+
+    Errors are logged and swallowed; the caller must not await this on the
+    real-time inference path.
+    """
+    payload = {
+        "user_id": user_id,
+        "species_common": det.common_name,
+        "species_scientific": det.scientific_name,
+        "confidence": det.confidence,
+        "illustration_path": None,
+        "detected_at": datetime.now(timezone.utc).isoformat(),
+    }
+    base_url = (settings.supabase_url or "").rstrip("/")
+    if not base_url:
+        logger.warning("SUPABASE_URL is not configured; detection not persisted")
+        return
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(
+                f"{base_url}/rest/v1/detections",
+                headers={
+                    "apikey": settings.supabase_anon_key,
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal",
+                },
+                json=payload,
+            )
+            resp.raise_for_status()
+    except httpx.HTTPError:
+        logger.exception("Supabase detection insert failed for %s", det.scientific_name)
+
+
 # ── Inference + persistence + broadcast ───────────────────────────────────────
 
 
@@ -64,6 +102,7 @@ async def _process_buffer(
     db: aiosqlite.Connection,
     user_id: str,
     buffer: list[bytes],
+    token: str,
     confidence_threshold: float = 0.5,
 ) -> None:
     """Run one inference cycle on the 3-frame buffer.
@@ -71,7 +110,7 @@ async def _process_buffer(
     1. Runs BirdNET inference.
     2. For each detection ≥ 0.5 confidence:
        a. Resolves illustration path.
-       b. Inserts a row into the detections table.
+       b. Persists the detection to Supabase (fire-and-forget).
     3. Builds the detection message per contracts/websocket.md.
     4. Sends the message back on the audio WebSocket.
     5. Broadcasts the same message to all /ws/detections clients for this user.
@@ -112,28 +151,8 @@ async def _process_buffer(
     for det in detections:
         illus = _illustration_path(det.scientific_name)
 
-        # Insert into detections table
-        try:
-            await db.execute(
-                """
-                INSERT INTO detections
-                    (id, user_id, species_common, species_scientific,
-                     confidence, illustration_path, detected_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    str(uuid.uuid4()),
-                    user_id,
-                    det.common_name,
-                    det.scientific_name,
-                    det.confidence,
-                    illus,
-                    timestamp,
-                ),
-            )
-        except Exception:
-            logger.exception("DB insert failed for detection %s", det.scientific_name)
-            # Non-fatal: still broadcast the detection
+        # Persist to Supabase without blocking the inference loop
+        asyncio.create_task(_save_detection_to_supabase(user_id, det, token))
 
         items.append(
             {
@@ -145,11 +164,6 @@ async def _process_buffer(
                 "timestamp": timestamp,
             }
         )
-
-    try:
-        await db.commit()
-    except Exception:
-        logger.exception("DB commit failed")
 
     # ── Build and dispatch message (contract shape) ───────────────────────────
     payload = {"type": "detection", "detections": items}
@@ -199,6 +213,8 @@ async def audio_ws(websocket: WebSocket, token: str | None = None):
         await websocket.close(code=4001)
         return
 
+    user_token = token or ""
+
     logger.info("audio connected user=%s", user_id)
 
     scheme = "https" if websocket.url.scheme == "wss" else "http"
@@ -239,7 +255,7 @@ async def audio_ws(websocket: WebSocket, token: str | None = None):
 
                 if len(buffer) == _BUFFER_FRAMES:
                     await _process_buffer(
-                        websocket, db, user_id, buffer, confidence_threshold
+                        websocket, db, user_id, buffer, user_token, confidence_threshold
                     )
                     buffer.clear()
 

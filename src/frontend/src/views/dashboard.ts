@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { getSettings, putSettings } from '../api/settings';
+import { clearDetections } from '../api/detections';
 import { state } from '../state';
 import { navigate } from '../router';
 import { renderDiagnostics } from '../components/diagnostics';
@@ -60,6 +61,7 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
             <label class="setting-label" for="s-display-mode">Display mode</label>
             <select class="setting-select" id="s-display-mode">
               <option value="collage">Collage</option>
+              <option value="collection">Collection</option>
               <option value="latest_bird">Latest Bird</option>
               <option value="newest_arrival">Newest Arrival</option>
             </select>
@@ -78,7 +80,7 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
               <option value="all">All time</option>
             </select>
           </div>
-          <div class="setting-row collage-only" id="row-max-species">
+          <div class="setting-row" id="row-max-species">
             <label class="setting-label" for="s-max-species">Species on page</label>
             <select class="setting-select" id="s-max-species">
               <option value="10">10</option>
@@ -132,6 +134,10 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
           <div class="setting-row" id="row-confidence-threshold">
             <label class="setting-label" for="s-confidence-threshold">Confidence threshold <span id="s-confidence-threshold-val">0.50</span></label>
             <input class="setting-range" type="range" id="s-confidence-threshold" min="0" max="1" step="0.05" value="0.5" />
+          </div>
+          <div class="setting-row setting-row-actions" id="row-clear-collection">
+            <button class="btn-clear-collection" id="clear-collection-btn" type="button">Clear detection history</button>
+            <span class="clear-collection-status hidden" id="clear-collection-status"></span>
           </div>
         </div>
       </section>
@@ -271,6 +277,30 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
       log('SETTINGS', `Microphone permission request failed: ${message}`);
       audioPermissionHint.textContent = 'Microphone access denied. Enable it in browser settings to select a device.';
       audioPermissionBtn.disabled = false;
+    }
+  });
+
+  // Clear detection history
+  const clearCollectionBtn = container.querySelector<HTMLButtonElement>('#clear-collection-btn')!;
+  const clearCollectionStatus = container.querySelector<HTMLElement>('#clear-collection-status')!;
+  clearCollectionBtn.addEventListener('click', async () => {
+    clearCollectionBtn.disabled = true;
+    clearCollectionStatus.textContent = 'Clearing…';
+    clearCollectionStatus.className = 'clear-collection-status';
+    try {
+      await clearDetections();
+      state.clearDetections();
+      clearCollectionStatus.textContent = 'Detection history cleared';
+      clearCollectionStatus.className = 'clear-collection-status success';
+      log('SETTINGS', 'Detection history cleared');
+      setTimeout(() => { clearCollectionStatus.className = 'clear-collection-status hidden'; }, 2000);
+    } catch (err: unknown) {
+      const message = (err as { message?: string }).message ?? 'Clear failed';
+      clearCollectionStatus.textContent = message;
+      clearCollectionStatus.className = 'clear-collection-status error';
+      log('ERROR', `Failed to clear detection history: ${message}`);
+    } finally {
+      clearCollectionBtn.disabled = false;
     }
   });
 

@@ -1,11 +1,11 @@
-import type { Detection, Settings } from '../types';
+import type { Detection } from '../types';
 import { state } from '../state';
 import { resolveArtworkPathSync } from '../lib/artwork';
 import { getMassByName } from '../lib/bird-sizes';
 import { log } from '../lib/logger';
 
 // Logarithmic scale parameters — log(MAX_MASS_G+1) used as denominator
-const MAX_MASS_G = 5000; // heaviest common display species reference
+const MAX_MASS_G = 5000;
 const MIN_SIZE_PX = 80;
 const MAX_SIZE_PX = 280;
 
@@ -17,7 +17,6 @@ interface ActiveBird {
   commonName: string;
   illustrationPath: string | null;
   detectedAt: number;
-  detectionCount: number;
   size: number;
   x: number;
   y: number;
@@ -28,23 +27,37 @@ const activeBirds = new Map<string, ActiveBird>();
 let canvas: HTMLElement | null = null;
 let emptyPerch: HTMLElement | null = null;
 
-export function mountCollage(canvasEl: HTMLElement, perchEl: HTMLElement) {
+// Tracks the latest detection timestamp observed for each species, even when
+// the shared state store keeps an older higher-confidence detection. This
+// drives LRU-style FIFO replacement in the collection.
+const speciesLastDetectedAt = new Map<string, number>();
+
+export function mountCollection(canvasEl: HTMLElement, perchEl: HTMLElement) {
   canvas = canvasEl;
   emptyPerch = perchEl;
+  speciesLastDetectedAt.clear();
   renderFromState();
   updateEmptyState();
 }
 
-export function unmountCollage() {
+export function unmountCollection() {
   activeBirds.forEach(b => { b.el.remove(); });
   activeBirds.clear();
+  speciesLastDetectedAt.clear();
   canvas = null;
   emptyPerch = null;
 }
 
-export function handleDetection(_detections: Detection[]) {
-  // Always render from the full state store; the passed array may contain
-  // only the newest detections.
+export function handleDetection(detections: Detection[]) {
+  const now = Date.now();
+  for (const d of detections) {
+    const sci = scientificName(d);
+    if (!sci) continue;
+    const ts = detectionTimestamp(d) || now;
+    speciesLastDetectedAt.set(sci, Math.max(speciesLastDetectedAt.get(sci) ?? 0, ts));
+  }
+  // Render from the full state store; the passed array is only used to refresh
+  // last-seen timestamps.
   renderFromState();
 }
 
@@ -52,35 +65,12 @@ function renderFromState() {
   const settings = state.getSettings();
   if (!settings || !canvas) return;
 
-  const now = Date.now();
-  const windowMs = lookbackWindowMs(settings.lookback_window);
-  const cutoff = windowMs === null ? 0 : now - windowMs;
-
+  const max = settings.max_species ?? Infinity;
   const allDets = state.getDetections();
-  const inWindow: Detection[] = [];
-  for (const d of allDets) {
-    if (detectionTimestamp(d) >= cutoff) inWindow.push(d);
-  }
-
-  // Count detections per species inside the lookback window.
-  const counts = new Map<string, number>();
-  for (const d of inWindow) {
-    const sci = scientificName(d);
-    if (!sci) continue;
-    counts.set(sci, (counts.get(sci) ?? 0) + 1);
-  }
-
-  // Count detections per species across the full history for lifetime rarity.
-  const allTimeCounts = new Map<string, number>();
-  for (const d of allDets) {
-    const sci = scientificName(d);
-    if (!sci) continue;
-    allTimeCounts.set(sci, (allTimeCounts.get(sci) ?? 0) + 1);
-  }
 
   // Deduplicate by scientific name; keep highest-confidence / latest entry.
   const bestBySpecies = new Map<string, Detection>();
-  for (const d of inWindow) {
+  for (const d of allDets) {
     const sci = scientificName(d);
     if (!sci) continue;
     const existing = bestBySpecies.get(sci);
@@ -89,45 +79,43 @@ function renderFromState() {
     }
   }
 
-  // Sort according to species_sort, then by most-recent detection.
-  const sorted = Array.from(bestBySpecies.entries()).sort(([sciA, detA], [sciB, detB]) => {
-    const countA = settings.species_sort === 'rarest_all_time'
-      ? (allTimeCounts.get(sciA) ?? 0)
-      : (counts.get(sciA) ?? 0);
-    const countB = settings.species_sort === 'rarest_all_time'
-      ? (allTimeCounts.get(sciB) ?? 0)
-      : (counts.get(sciB) ?? 0);
-    if (settings.species_sort === 'most_heard') {
-      if (countB !== countA) return countB - countA;
-    } else {
-      // 'rarest_window' and 'rarest_all_time' -> fewest detections first
-      if (countA !== countB) return countA - countB;
-    }
-    return detectionTimestamp(detB) - detectionTimestamp(detA);
-  });
+  // Build list with effective detected_at (state timestamp or tracked local).
+  const entries = Array.from(bestBySpecies.entries()).map(([sci, det]) => ({
+    sci,
+    det,
+    detectedAt: Math.max(
+      detectionTimestamp(det),
+      speciesLastDetectedAt.get(sci) ?? 0
+    ),
+  }));
 
-  const max = settings.max_species;
-  const targetEntries = max === null ? sorted : sorted.slice(0, max);
-  const targetSpecies = new Set(targetEntries.map(([sci]) => sci));
+  // Most recently detected species first; this makes new detections enter the
+  // collection and pushes the oldest birds out when max_species is reached.
+  entries.sort((a, b) => b.detectedAt - a.detectedAt);
 
-  // Remove birds that are no longer in the filtered/sorted target set.
+  const selected = entries.slice(0, max);
+  const targetSpecies = new Set(selected.map(e => e.sci));
+
+  // Remove birds that fell out of the top max_species.
   for (const [sci, bird] of activeBirds) {
     if (!targetSpecies.has(sci)) {
       removeBird(sci);
     }
   }
 
-  // Add new birds and refresh metadata for existing ones.
-  for (const [sci, det] of targetEntries) {
+  // Add new birds and refresh metadata/labels for existing ones.
+  for (const { sci, det, detectedAt } of selected) {
     if (activeBirds.has(sci)) {
-      refreshBird(sci, det, counts.get(sci) ?? 0);
+      const bird = activeBirds.get(sci)!;
+      bird.detectedAt = detectedAt;
+      updateBirdLabel(bird);
     } else {
-      addBird(det, sci, counts.get(sci) ?? 0);
+      addBird(det, sci, detectedAt);
     }
   }
 
   updateEmptyState();
-  log('DISPLAY', `Rendered ${activeBirds.size} birds in collage mode`);
+  log('DISPLAY', `Rendered ${activeBirds.size} birds in collection mode`);
 }
 
 // ─── Detection helpers ───────────────────────────────────────────────────────
@@ -152,17 +140,6 @@ function isBetterDetection(a: Detection, b: Detection): boolean {
   return detectionTimestamp(a) > detectionTimestamp(b);
 }
 
-function lookbackWindowMs(w: Settings['lookback_window']): number | null {
-  switch (w) {
-    case '15m': return 15 * 60 * 1000;
-    case '1h':  return 60 * 60 * 1000;
-    case '6h':  return 6 * 60 * 60 * 1000;
-    case '24h': return 24 * 60 * 60 * 1000;
-    case 'all': return null;
-    default:    return 24 * 60 * 60 * 1000;
-  }
-}
-
 // ─── DOM helpers ─────────────────────────────────────────────────────────────
 
 function resolveIllustrationPath(det: Detection): string | null {
@@ -173,7 +150,7 @@ function resolveIllustrationPath(det: Detection): string | null {
   return resolveArtworkPathSync(sciName, common, settings.artwork_style);
 }
 
-function addBird(det: Detection, sciName: string, count: number) {
+function addBird(det: Detection, sciName: string, detectedAt: number) {
   if (!canvas) return;
 
   const mass = state.getMass(sciName) ?? getMassByName(sciName);
@@ -184,7 +161,6 @@ function addBird(det: Detection, sciName: string, count: number) {
   const el = createBirdCard(det, sciName, size, x, y, mass);
   canvas.appendChild(el);
 
-  // Double-rAF to trigger CSS transition
   requestAnimationFrame(() => {
     requestAnimationFrame(() => { el.classList.remove('entering'); el.classList.add('visible'); });
   });
@@ -193,18 +169,9 @@ function addBird(det: Detection, sciName: string, count: number) {
     scientificName: sciName,
     commonName: commonName(det) || sciName,
     illustrationPath: resolveIllustrationPath(det),
-    detectedAt: detectionTimestamp(det),
-    detectionCount: count,
+    detectedAt,
     size, x, y, el,
   });
-}
-
-function refreshBird(sciName: string, det: Detection, count: number) {
-  const bird = activeBirds.get(sciName);
-  if (!bird) return;
-  bird.detectedAt = detectionTimestamp(det);
-  bird.detectionCount = count;
-  updateBirdLabel(bird);
 }
 
 function removeBird(sciName: string) {
@@ -222,7 +189,6 @@ function createBirdCard(det: Detection, sciName: string, size: number, x: number
   const el = document.createElement('div');
   el.className = 'bird-card entering';
 
-  // Heavier birds render above lighter ones, preserving the natural-history-plate feel
   const normalizedMass = Math.log(mass + 1) / Math.log(MAX_MASS_G + 1);
   el.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px;z-index:${Math.round(normalizedMass * 90 + 10)};`;
 
@@ -255,8 +221,7 @@ function updateBirdLabel(bird: ActiveBird) {
 function updateBirdLabelContent(el: HTMLElement, det: { common_name?: string; species_common?: string; scientific_name?: string; species_scientific?: string }, sciName: string) {
   const settings = state.getSettings();
   if (!settings?.show_species_label) {
-    const existing = el.querySelector('.bird-label');
-    existing?.remove();
+    el.querySelector('.bird-label')?.remove();
     return;
   }
 
@@ -302,11 +267,7 @@ function computePosition(
 
   const normalizedMass = Math.log(mass + 1) / Math.log(MAX_MASS_G + 1);
   const maxRadius = Math.min(availW, availH) * 0.42;
-
-  // Heavier birds: radius closer to 0 (center); lighter: closer to maxRadius
   const baseRadius = maxRadius * (1 - normalizedMass * 0.78);
-
-  // Deterministic base angle from species name
   const baseAngle = (simpleHash(sciName) % 360) * (Math.PI / 180);
 
   const centerX = W / 2 - size / 2;
@@ -319,23 +280,14 @@ function computePosition(
     const radius = baseRadius + rStep * size * 0.65;
     for (let aStep = 0; aStep < ANGLE_STEPS; aStep++) {
       const angle = baseAngle + (aStep * 2 * Math.PI) / ANGLE_STEPS;
-      const x = clamp(
-        centerX + Math.cos(angle) * radius,
-        margin,
-        margin + availW - size
-      );
-      const y = clamp(
-        centerY + Math.sin(angle) * radius,
-        margin,
-        margin + availH - size
-      );
+      const x = clamp(centerX + Math.cos(angle) * radius, margin, margin + availW - size);
+      const y = clamp(centerY + Math.sin(angle) * radius, margin, margin + availH - size);
       if (!overlapsAny(x, y, size)) {
         return { x: Math.round(x), y: Math.round(y) };
       }
     }
   }
 
-  // Fallback: place at desired position regardless
   const fbX = clamp(centerX + Math.cos(baseAngle) * baseRadius, margin, margin + availW - size);
   const fbY = clamp(centerY + Math.sin(baseAngle) * baseRadius, margin, margin + availH - size);
   return { x: Math.round(fbX), y: Math.round(fbY) };
@@ -379,10 +331,10 @@ export function refreshSettings() {
   const settings = state.getSettings();
   if (!settings || !canvas) return;
 
-  // Re-run the full filter; max_species / lookback_window / species_sort may have changed.
+  // max_species may have changed; re-render from state.
   renderFromState();
 
-  // Reposition all birds with updated margin
+  // Reposition all birds with updated margin and refresh labels.
   activeBirds.forEach((bird, sciName) => {
     const mass = state.getMass(sciName) ?? getMassByName(sciName);
     const { x, y } = computePosition(sciName, mass, settings.margin_percent, bird.size);

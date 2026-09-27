@@ -1,8 +1,9 @@
 import { startAudio, stopAudio, setStatusHandler, requestMicPermission, type MicStatus } from '../ws/audio';
 import { connectDetections, disconnectDetections } from '../ws/detections';
 import { mountCollage, unmountCollage, handleDetection as collageDetect, refreshSettings as collageRefresh } from '../display/collage';
-import { mountLatestBird, unmountLatestBird, handleDetection as latestDetect } from '../display/latest-bird';
-import { mountNewestArrival, unmountNewestArrival, handleDetection as newestDetect } from '../display/newest-arrival';
+import { mountLatestBird, unmountLatestBird, handleDetection as latestDetect, refreshSettings as latestRefresh } from '../display/latest-bird';
+import { mountNewestArrival, unmountNewestArrival, handleDetection as newestDetect, refreshSettings as newestRefresh } from '../display/newest-arrival';
+import { mountCollection, unmountCollection, handleDetection as collectionDetect, refreshSettings as collectionRefresh } from '../display/collection';
 import { state } from '../state';
 import { log } from '../lib/logger';
 import type { Detection, Settings } from '../types';
@@ -50,18 +51,15 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
     if (currentMode === 'collage') unmountCollage();
     else if (currentMode === 'latest_bird') unmountLatestBird();
     else if (currentMode === 'newest_arrival') unmountNewestArrival();
+    else if (currentMode === 'collection') unmountCollection();
 
     currentMode = mode;
     log('DISPLAY', `Switched display mode to ${mode}`);
 
     if (mode === 'collage') mountCollage(canvas, emptyPerch);
     else if (mode === 'latest_bird') mountLatestBird(canvas, emptyPerch);
-    else if (mode === 'newest_arrival') {
-      mountNewestArrival(canvas, emptyPerch, () => {
-        // Fall back to collage
-        mountMode('collage');
-      });
-    }
+    else if (mode === 'newest_arrival') mountNewestArrival(canvas, emptyPerch);
+    else if (mode === 'collection') mountCollection(canvas, emptyPerch);
   }
 
   // Initial mode
@@ -86,6 +84,7 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
       if (currentMode === 'collage') collageDetect(detections);
       else if (currentMode === 'latest_bird') latestDetect(detections);
       else if (currentMode === 'newest_arrival') newestDetect(detections, s);
+      else if (currentMode === 'collection') collectionDetect(detections);
     },
     (newSettings: Settings) => {
       state.setSettings(newSettings);
@@ -96,6 +95,9 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
       applyMarginToCanvas(canvas, newSettings.margin_percent);
       applyDisplayFont(newSettings.font_family);
       if (currentMode === 'collage') collageRefresh();
+      else if (currentMode === 'latest_bird') latestRefresh();
+      else if (currentMode === 'newest_arrival') newestRefresh();
+      else if (currentMode === 'collection') collectionRefresh();
     }
   );
 
@@ -137,6 +139,7 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
     if (currentMode === 'collage') unmountCollage();
     else if (currentMode === 'latest_bird') unmountLatestBird();
     else if (currentMode === 'newest_arrival') unmountNewestArrival();
+    else if (currentMode === 'collection') unmountCollection();
   };
 }
 

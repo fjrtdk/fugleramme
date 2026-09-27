@@ -137,6 +137,9 @@ function _connect() {
       const msg = JSON.parse(event.data as string) as { type: string; detections?: Detection[]; settings?: Settings };
       if (msg.type === 'detection' && msg.detections) {
         _recordInferenceAttempt(msg.detections);
+        for (const d of msg.detections) {
+          state.addDetection(d);
+        }
         if (onDetection) onDetection(msg.detections);
       } else if (msg.type === 'settings_changed' && onSettingsChanged && msg.settings) {
         onSettingsChanged(msg.settings);

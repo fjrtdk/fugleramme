@@ -1,6 +1,7 @@
 import { state } from './state';
 import { supabase, supabaseUserToAppUser } from './lib/supabase';
 import { getSettings } from './api/settings';
+import { loadDetections } from './api/detections';
 import { getSpecies as fetchSpecies } from './api/species';
 import { renderLogin } from './views/login';
 import { renderRegister } from './views/register';
@@ -110,10 +111,15 @@ async function route() {
       appLayerEl.appendChild(dispLayerEl);
       root.appendChild(appLayerEl);
 
-      // Pre-load settings and species
-      const [settingsRes, speciesRes] = await Promise.all([getSettings(), fetchSpecies()]);
+      // Pre-load settings, species, and detection history
+      const [settingsRes, speciesRes, detections] = await Promise.all([
+        getSettings(),
+        fetchSpecies(),
+        loadDetections(),
+      ]);
       if (settingsRes.data) state.setSettings(settingsRes.data);
       if (speciesRes.data) state.setSpecies(speciesRes.data.species);
+      state.setDetections(detections);
 
       // Render dashboard
       renderDashboard(dashLayerEl, () => flipToDisplay());
