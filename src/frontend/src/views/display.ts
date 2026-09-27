@@ -77,7 +77,7 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
     micRetry.classList.toggle('hidden', status !== 'denied');
   });
 
-  micRetry.addEventListener('click', () => { requestMicPermission(); });
+  micRetry.addEventListener('click', () => { requestMicPermission(settings.audio_source_device_id ?? undefined); });
 
   // Connect detections WebSocket
   connectDetections(
@@ -99,8 +99,8 @@ export function renderDisplay(container: HTMLElement, onTripleTap: () => void) {
     }
   );
 
-  // Start audio
-  startAudio();
+  // Start audio with the persisted input device (falls back to default if none selected)
+  startAudio(settings.audio_source_device_id ?? undefined);
 
   // Triple-tap detection
   let tapCount = 0;

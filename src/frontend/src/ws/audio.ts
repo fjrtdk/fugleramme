@@ -63,30 +63,71 @@ export function getAudioWsState(): number {
   return ws?.readyState ?? WebSocket.CLOSED;
 }
 
-export async function startAudio() {
+/** Enumerate available audio input devices. Labels are only populated after microphone permission has been granted. */
+export async function listAudioInputDevices(): Promise<MediaDeviceInfo[]> {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices.filter(d => d.kind === 'audioinput');
+}
+
+/** Whether the audio capture pipeline is currently active (not merely whether the WebSocket is open). */
+export function isAudioRunning(): boolean {
+  return audioContext !== null && !intentionallyStopped;
+}
+
+const BASE_AUDIO_CONSTRAINT: MediaTrackConstraints = {
+  channelCount: 1,
+  sampleRate: { ideal: TARGET_SAMPLE_RATE },
+};
+
+function buildAudioConstraints(deviceId?: string): MediaStreamConstraints {
+  return {
+    audio: deviceId
+      ? { ...BASE_AUDIO_CONSTRAINT, deviceId: { exact: deviceId } }
+      : BASE_AUDIO_CONSTRAINT,
+    video: false,
+  };
+}
+
+async function acquireAudioStream(deviceId?: string): Promise<MediaStream> {
+  return navigator.mediaDevices.getUserMedia(buildAudioConstraints(deviceId));
+}
+
+function handleGetUserMediaError(err: unknown) {
+  const error = err as { name?: string; message?: string };
+  log('MIC', `getUserMedia error: ${error.name ?? 'unknown'} — ${error.message ?? ''}`);
+  if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+    emitStatus('denied');
+  } else {
+    emitStatus('error');
+  }
+}
+
+export async function startAudio(deviceId?: string) {
   intentionallyStopped = false;
   retryCount = 0;
   emitStatus('requesting');
-  log('MIC', 'getUserMedia requesting…');
+  log('MIC', deviceId ? `getUserMedia requesting device "${deviceId}"…` : 'getUserMedia requesting…');
 
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, sampleRate: { ideal: TARGET_SAMPLE_RATE } },
-      video: false,
-    });
-    const label = mediaStream.getAudioTracks()[0]?.label || 'unknown device';
-    log('MIC', `getUserMedia success — "${label}"`);
+    mediaStream = await acquireAudioStream(deviceId);
   } catch (err: unknown) {
-    const error = err as { name?: string; message?: string };
-    log('MIC', `getUserMedia error: ${error.name ?? 'unknown'} — ${error.message ?? ''}`);
-    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-      emitStatus('denied');
+    if (deviceId) {
+      const error = err as { message?: string };
+      log('MIC', `getUserMedia exact deviceId failed (${error.message ?? 'unknown'}); falling back to default constraints`);
+      try {
+        mediaStream = await acquireAudioStream();
+      } catch (err2: unknown) {
+        handleGetUserMediaError(err2);
+        return;
+      }
     } else {
-      emitStatus('error');
+      handleGetUserMediaError(err);
+      return;
     }
-    return;
   }
 
+  const label = mediaStream.getAudioTracks()[0]?.label || 'unknown device';
+  log('MIC', `getUserMedia success — "${label}"`);
   audioContext = new AudioContext();
   const nativeRate = audioContext.sampleRate;
   const ratio = nativeRate / TARGET_SAMPLE_RATE;
@@ -150,6 +191,59 @@ export function stopAudio() {
   emitStatus('idle');
 }
 
+/**
+ * Switch the active audio input device while keeping the WebSocket and AudioContext alive.
+ *
+ * Strategy: stop the current MediaStream tracks, drop the old MediaStreamAudioSourceNode,
+ * acquire a new stream with the requested deviceId (falling back to default if the exact
+ * device is no longer available), then create a fresh MediaStreamAudioSourceNode and connect
+ * it to the existing ScriptProcessorNode. The WebSocket is left open so detection continuity
+ * is preserved.
+ */
+export async function restartAudioWithDevice(deviceId: string | null) {
+  if (!audioContext || !scriptProcessor || intentionallyStopped) {
+    log('MIC', `Device selection changed to ${deviceId ?? 'default'} while audio not running; will apply on next startAudio()`);
+    return;
+  }
+
+  log('MIC', `Restarting audio with device ${deviceId ?? 'default'} (keeping WS open)`);
+  emitStatus('requesting');
+
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+  if (sourceNode) {
+    sourceNode.disconnect();
+    sourceNode = null;
+  }
+
+  try {
+    mediaStream = await acquireAudioStream(deviceId ?? undefined);
+  } catch (err: unknown) {
+    if (deviceId) {
+      const error = err as { message?: string };
+      log('MIC', `restart exact deviceId failed (${error.message ?? 'unknown'}); falling back to default constraints`);
+      try {
+        mediaStream = await acquireAudioStream();
+      } catch (err2: unknown) {
+        handleGetUserMediaError(err2);
+        return;
+      }
+    } else {
+      handleGetUserMediaError(err);
+      return;
+    }
+  }
+
+  sourceNode = audioContext.createMediaStreamSource(mediaStream);
+  sourceNode.connect(scriptProcessor);
+
+  const label = mediaStream.getAudioTracks()[0]?.label || 'unknown device';
+  log('MIC', `Audio rewired to "${label}"`);
+  emitStatus('recording');
+}
+
 function _connectWs() {
   const token = state.getToken();
   if (!token) return;
@@ -209,7 +303,7 @@ function _scheduleWsRetry() {
   wsRetryTimer = setTimeout(_connectWs, delay);
 }
 
-export async function requestMicPermission() {
+export async function requestMicPermission(deviceId?: string) {
   stopAudio();
-  await startAudio();
+  await startAudio(deviceId);
 }

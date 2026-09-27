@@ -6,6 +6,7 @@ import { renderDiagnostics } from '../components/diagnostics';
 import { log } from '../lib/logger';
 import type { Settings } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
+import { listAudioInputDevices, restartAudioWithDevice, isAudioRunning } from '../ws/audio';
 
 const FONT_FAMILIES = [
   'Alegreya',
@@ -37,9 +38,24 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
           Start Fugleramme
         </button>
       </main>
-      <section class="settings-section" aria-label="Display settings">
-        <h2 class="settings-heading">Display Settings</h2>
-        <div class="settings-panel" id="settings-panel">
+      <section class="settings-section" aria-label="Audio input">
+        <h2 class="settings-heading">Audio input</h2>
+        <div class="settings-panel" id="audio-settings-panel">
+          <div class="setting-row" id="row-audio-source">
+            <label class="setting-label" for="s-audio-source">Microphone</label>
+            <select class="setting-select" id="s-audio-source">
+              <option value="">Default microphone</option>
+            </select>
+          </div>
+          <div class="setting-row setting-row-audio-permission" id="row-audio-permission">
+            <span class="audio-permission-hint" id="audio-permission-hint">Allow microphone access to see available devices.</span>
+            <button class="btn-audio-permission" id="audio-permission-btn" type="button">Allow microphone</button>
+          </div>
+        </div>
+      </section>
+      <section class="settings-section" aria-label="Display">
+        <h2 class="settings-heading">Display</h2>
+        <div class="settings-panel" id="display-settings-panel">
           <div class="setting-row">
             <label class="setting-label" for="s-display-mode">Display mode</label>
             <select class="setting-select" id="s-display-mode">
@@ -81,26 +97,6 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
               <option value="rarest_all_time">The rarest all time</option>
             </select>
           </div>
-          <div class="setting-subheading" id="location-subheading">
-            <span class="setting-subheading-label">Location</span>
-            <span class="setting-subheading-hint">Used by BirdNET for geographic species priors</span>
-          </div>
-          <div class="setting-row" id="row-latitude">
-            <label class="setting-label" for="s-latitude">Latitude</label>
-            <input class="setting-number" type="number" id="s-latitude" min="-90" max="90" step="0.0001" placeholder="e.g. 55.6761" aria-describedby="lat-hint" />
-          </div>
-          <div class="setting-row" id="row-longitude">
-            <label class="setting-label" for="s-longitude">Longitude</label>
-            <input class="setting-number" type="number" id="s-longitude" min="-180" max="180" step="0.0001" placeholder="e.g. 12.5683" aria-describedby="lon-hint" />
-          </div>
-          <div class="setting-row setting-row-location-action">
-            <button class="btn-use-location" id="use-location-btn" type="button">Use My Location</button>
-            <span class="location-status hidden" id="location-status"></span>
-          </div>
-          <div class="setting-subheading" id="display-subheading">
-            <span class="setting-subheading-label">Display</span>
-            <span class="setting-subheading-hint">Font, artwork, and label preferences</span>
-          </div>
           <div class="setting-row" id="row-font">
             <label class="setting-label" for="s-font-family">Font</label>
             <select class="setting-select" id="s-font-family">
@@ -128,13 +124,35 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
               <option value="scientific">Scientific name</option>
             </select>
           </div>
-          <div class="setting-subheading" id="detection-subheading">
-            <span class="setting-subheading-label">Detection</span>
-            <span class="setting-subheading-hint">How confident BirdNET must be to report a bird</span>
-          </div>
+        </div>
+      </section>
+      <section class="settings-section" aria-label="Detection">
+        <h2 class="settings-heading">Detection</h2>
+        <div class="settings-panel" id="detection-settings-panel">
           <div class="setting-row" id="row-confidence-threshold">
             <label class="setting-label" for="s-confidence-threshold">Confidence threshold <span id="s-confidence-threshold-val">0.50</span></label>
             <input class="setting-range" type="range" id="s-confidence-threshold" min="0" max="1" step="0.05" value="0.5" />
+          </div>
+        </div>
+      </section>
+      <section class="settings-section" aria-label="Location">
+        <h2 class="settings-heading">Location</h2>
+        <div class="settings-panel" id="location-settings-panel">
+          <div class="setting-subheading" id="location-subheading">
+            <span class="setting-subheading-label">Coordinates</span>
+            <span class="setting-subheading-hint">Used by BirdNET for geographic species priors</span>
+          </div>
+          <div class="setting-row" id="row-latitude">
+            <label class="setting-label" for="s-latitude">Latitude</label>
+            <input class="setting-number" type="number" id="s-latitude" min="-90" max="90" step="0.0001" placeholder="e.g. 55.6761" aria-describedby="lat-hint" />
+          </div>
+          <div class="setting-row" id="row-longitude">
+            <label class="setting-label" for="s-longitude">Longitude</label>
+            <input class="setting-number" type="number" id="s-longitude" min="-180" max="180" step="0.0001" placeholder="e.g. 12.5683" aria-describedby="lon-hint" />
+          </div>
+          <div class="setting-row setting-row-location-action">
+            <button class="btn-use-location" id="use-location-btn" type="button">Use My Location</button>
+            <span class="location-status hidden" id="location-status"></span>
           </div>
           <div class="setting-row setting-row-actions">
             <button class="btn-save-settings" id="save-settings">Save settings</button>
@@ -226,6 +244,36 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
     log('SETTINGS', `Artwork style changed to ${artworkSelect.value}`);
   });
 
+  // Audio source selector
+  const audioSelect = container.querySelector<HTMLSelectElement>('#s-audio-source')!;
+  const audioPermissionBtn = container.querySelector<HTMLButtonElement>('#audio-permission-btn')!;
+  const audioPermissionHint = container.querySelector<HTMLElement>('#audio-permission-hint')!;
+  const audioPermissionRow = container.querySelector<HTMLElement>('#row-audio-permission')!;
+
+  audioSelect.addEventListener('change', async () => {
+    const deviceId = audioSelect.value || null;
+    log('SETTINGS', `Audio source changed to ${deviceId ?? 'default'}`);
+    if (isAudioRunning()) {
+      await restartAudioWithDevice(deviceId);
+    }
+  });
+
+  audioPermissionBtn.addEventListener('click', async () => {
+    audioPermissionBtn.disabled = true;
+    audioPermissionHint.textContent = 'Requesting microphone access…';
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      await populateAudioDeviceSelector(container, state.getSettings()?.audio_source_device_id ?? null);
+      audioPermissionRow.classList.add('hidden');
+    } catch (err: unknown) {
+      const message = (err as { message?: string }).message ?? 'Permission denied';
+      log('SETTINGS', `Microphone permission request failed: ${message}`);
+      audioPermissionHint.textContent = 'Microphone access denied. Enable it in browser settings to select a device.';
+      audioPermissionBtn.disabled = false;
+    }
+  });
+
   // Save settings
   container.querySelector('#save-settings')!.addEventListener('click', async () => {
     await saveSettings(container);
@@ -251,11 +299,11 @@ export function renderDashboard(container: HTMLElement, onFlipToDisplay: () => v
     } else {
       log('SETTINGS', `Loaded settings: ${JSON.stringify(settings)}`);
     }
-    if (settings) populateSettingsForm(container, settings);
+    if (settings) await populateSettingsForm(container, settings);
   }
 }
 
-function populateSettingsForm(container: HTMLElement, s: Settings) {
+async function populateSettingsForm(container: HTMLElement, s: Settings) {
   const modeEl = container.querySelector<HTMLSelectElement>('#s-display-mode');
   const marginEl = container.querySelector<HTMLInputElement>('#s-margin');
   const marginValEl = container.querySelector<HTMLElement>('#s-margin-val');
@@ -294,6 +342,40 @@ function populateSettingsForm(container: HTMLElement, s: Settings) {
     '--display-font',
     `'${s.font_family ?? DEFAULT_SETTINGS.font_family}', Georgia, serif`
   );
+
+  // Populate audio device selector asynchronously (needs enumerateDevices)
+  await populateAudioDeviceSelector(container, s.audio_source_device_id);
+}
+
+async function populateAudioDeviceSelector(container: HTMLElement, selectedDeviceId: string | null) {
+  const select = container.querySelector<HTMLSelectElement>('#s-audio-source');
+  const permissionRow = container.querySelector<HTMLElement>('#row-audio-permission');
+  if (!select || !permissionRow) return;
+
+  const devices = await listAudioInputDevices();
+  const hasLabels = devices.some(d => d.label);
+
+  // Keep the "Default microphone" option and append discovered devices.
+  select.innerHTML = '<option value="">Default microphone</option>';
+  const optionsHtml = devices.map((d, i) => {
+    const label = d.label || `Microphone ${i + 1}`;
+    return `<option value="${escapeHtml(d.deviceId)}">${escapeHtml(label)}</option>`;
+  }).join('');
+  select.insertAdjacentHTML('beforeend', optionsHtml);
+
+  // If the saved device is not currently plugged in, preserve it as an option.
+  if (selectedDeviceId && !devices.find(d => d.deviceId === selectedDeviceId)) {
+    select.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(selectedDeviceId)}">Unknown device</option>`);
+  }
+
+  select.value = selectedDeviceId ?? '';
+
+  // Only hide the permission prompt once labels are available.
+  if (hasLabels) {
+    permissionRow.classList.add('hidden');
+  } else {
+    permissionRow.classList.remove('hidden');
+  }
 }
 
 function updateCollageOnlyVisibility(mode: string) {
@@ -320,6 +402,7 @@ async function saveSettings(container: HTMLElement) {
   const showLabelEl = container.querySelector<HTMLInputElement>('#s-show-label')!;
   const labelLangEl = container.querySelector<HTMLSelectElement>('#s-label-lang')!;
   const confidenceEl = container.querySelector<HTMLInputElement>('#s-confidence-threshold')!;
+  const audioSourceEl = container.querySelector<HTMLSelectElement>('#s-audio-source')!;
   const saveBtn = container.querySelector<HTMLButtonElement>('#save-settings')!;
   const saveStatus = container.querySelector<HTMLElement>('#save-status')!;
 
@@ -360,6 +443,7 @@ async function saveSettings(container: HTMLElement) {
     show_species_label: showLabelEl.checked,
     label_language: labelLangEl.value as Settings['label_language'],
     confidence_threshold: parseFloat(confidenceEl.value),
+    audio_source_device_id: audioSourceEl.value || null,
   };
 
   saveBtn.disabled = true;
@@ -421,5 +505,10 @@ function useMyLocation(container: HTMLElement) {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

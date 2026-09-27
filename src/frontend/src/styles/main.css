@@ -660,6 +660,46 @@
   border: var(--border-thin) solid var(--color-error-border);
 }
 
+/* ── Settings: Audio Input Group ──────────────────────────── */
+
+.setting-row-audio-permission {
+  justify-content: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.audio-permission-hint {
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-sm);
+  color: var(--color-dash-text-muted);
+}
+
+.btn-audio-permission {
+  padding: var(--space-2) var(--space-5);
+  background: transparent;
+  color: var(--color-forest-700);
+  border: var(--border-thin) solid var(--color-forest-400);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-family-dashboard);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  min-height: var(--touch-target-min);
+  transition:
+    background-color var(--micro-button-hover) var(--ease-out),
+    border-color var(--micro-button-hover) var(--ease-out);
+}
+
+.btn-audio-permission:hover:not(:disabled) {
+  background: var(--color-success-bg);
+  border-color: var(--color-forest-600);
+}
+
+.btn-audio-permission:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ── Settings: Toggle Control ─────────────────────────────── */
 
 .setting-toggle {
