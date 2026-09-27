@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fugleramme-shell-v1';
+const CACHE_NAME = 'fugleramme-shell-v2';
 const SHELL_URLS = ['/', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -18,22 +18,54 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  // Never cache API, WS, or artwork (dynamic)
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws/')) return;
-  // Cache-first for static shell assets
+
+  // Never cache API, WS, health, or artwork (dynamic)
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/ws/') ||
+    url.pathname.startsWith('/health/') ||
+    url.pathname.startsWith('/assets/artwork/')
+  ) {
+    return;
+  }
+
+  // Navigation requests: network-first, fallback to cache when offline
+  if (event.request.mode === 'navigate' || url.pathname === '/') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for hashed static assets
+  const isCacheableStatic =
+    event.request.method === 'GET' &&
+    (
+      (url.pathname.startsWith('/assets/') && !url.pathname.startsWith('/assets/artwork/')) ||
+      url.pathname.endsWith('.js') ||
+      url.pathname.endsWith('.css') ||
+      url.pathname === '/manifest.json'
+    );
+
+  if (!isCacheableStatic) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
-        // Only cache same-origin GET requests for static assets
-        if (event.request.method === 'GET' && (
-          url.pathname === '/' ||
-          (url.pathname.startsWith('/assets/') && !url.pathname.startsWith('/assets/artwork/')) ||
-          url.pathname.endsWith('.js') ||
-          url.pathname.endsWith('.css') ||
-          url.pathname === '/manifest.json'
-        )) {
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       });
