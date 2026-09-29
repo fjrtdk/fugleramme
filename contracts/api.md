@@ -214,6 +214,15 @@ Return the current authenticated user's profile.
 
 Update the current user's profile. All fields are optional; only provided fields are updated (partial update semantics).
 
+> **Status: legacy.** This endpoint reads and writes the local SQLite `users`
+> table. It is **not** the store the app uses — the frontend authenticates
+> through Supabase and persists profile fields in Supabase
+> `auth.users.user_metadata`. In particular `onboarding_seen` is written by the
+> frontend via `supabase.auth.updateUser({ data: { onboarding_seen } })`, and
+> `supabaseUserToAppUser` (`src/frontend/src/lib/supabase.ts`) reads it back
+> from `user_metadata`. This endpoint is retained for the legacy SQLite routers
+> only and is no longer called by the frontend.
+
 **Auth required:** yes
 
 **Request body:**

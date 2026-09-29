@@ -1,5 +1,5 @@
-import { patchMe } from '../api/auth';
 import { supabase } from '../lib/supabase';
+import { log } from '../lib/logger';
 import { state } from '../state';
 import { navigate } from '../router';
 
@@ -22,12 +22,11 @@ export function renderOnboarding(container: HTMLElement) {
   `;
 
   container.querySelector('#get-started')!.addEventListener('click', async () => {
-    // Update onboarding_seen in both the Python backend (when available) and
-    // Supabase user_metadata (persists across sessions in the hosted environment)
-    await Promise.allSettled([
-      patchMe({ onboarding_seen: true }),
-      supabase.auth.updateUser({ data: { onboarding_seen: true } }),
-    ]);
+    // Supabase user_metadata is the only store the app reads onboarding_seen
+    // from (see supabaseUserToAppUser in ../lib/supabase). A failed write must
+    // not trap the user here, so fall through to the dashboard regardless.
+    const { error } = await supabase.auth.updateUser({ data: { onboarding_seen: true } });
+    if (error) log('onboarding', `failed to persist onboarding_seen: ${error.message}`);
     const u = state.getUser();
     if (u) state.setUser({ ...u, onboarding_seen: true });
     navigate('dashboard');

@@ -32,7 +32,7 @@ CREATE TABLE users (
 | `username` | `NOT NULL`, `UNIQUE` | 1–64 chars; alphanumeric + `-` and `_` |
 | `email` | `NOT NULL`, `UNIQUE` | Lowercased before insert/lookup |
 | `password_hash` | `NOT NULL` | Never queried; only compared via hash library |
-| `onboarding_seen` | `NOT NULL`, `DEFAULT 0` | SQLite stores booleans as integers |
+| `onboarding_seen` | `NOT NULL`, `DEFAULT 0` | SQLite stores booleans as integers. **Not read by the app** — the frontend uses Supabase `auth.users.user_metadata.onboarding_seen` (see `contracts/api.md` §PATCH /api/v1/users/me) |
 | `created_at` | `NOT NULL` | Set once on insert; never updated |
 | `updated_at` | `NOT NULL` | Updated by application on every write |
 
